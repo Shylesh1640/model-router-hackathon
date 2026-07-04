@@ -1,86 +1,60 @@
-"""Source of Truth — zero-dependency in-memory vector store.
+"""Source of Truth — in-memory content-word overlap store.
 
-Uses numpy cosine similarity when available, falls back to
-character-n-gram hashing when numpy isn't installed.
-
-No external dependencies required.
+Zero external dependencies. Uses Dice coefficient on stopword-filtered
+content words for topic-aware distance measurement.
 """
 
-import hashlib
-import json
 import logging
-import math
 import uuid
-from pathlib import Path
 from typing import Optional
 
 from src.models import SourceDocument, SourceQueryResult
 
 logger = logging.getLogger(__name__)
 
-DATA_DIR = Path(__file__).parent.parent.parent / "data"
-
 
 class _TinyEmbed:
-    """Minimal embedding — n-gram hash vectors when no sentence-transformers.
+    """Minimal embedding — Jaccard similarity on content words.
 
-    Not as accurate as real embeddings, but good enough for distance-based
-    routing decisions in a demo/hackathon context.
+    No external dependencies. No hash collisions (word sets, not bins).
+    Topic separation via stopword-filtered bag-of-words intersection.
     """
 
-    def __init__(self, dim: int = 64):
-        self.dim = dim
-        self._has_numpy = False
-        try:
-            import numpy as np
-            self.np = np
-            self._has_numpy = True
-        except ImportError:
-            pass
+    _STOP = frozenset(
+        "the a an is are was were be been in on at to for of with by and or it its "
+        "this that what who how why when where do does did has have had not no i you "
+        "he she we they me him her my your our their about into also than then can "
+        "just like very from will would could should may might must out up off down "
+        "over under again further once here there all each every both few more most "
+        "some any no nor own same so such only other new now".split()
+    )
 
-    def encode(self, text: str) -> list[float]:
-        """Compute embedding vector for text."""
-        if self._has_numpy:
-            return self._encode_numpy(text)
-        return self._encode_pure(text)
+    @staticmethod
+    def _content_words(text: str) -> frozenset:
+        raw = text.lower().strip()
+        if "a:" in raw:
+            raw = raw[:raw.index("a:")].strip()
+        if raw.startswith("q:"):
+            raw = raw[2:].strip()
+        words = raw.replace("-", " ").replace("'", "").split()
+        return frozenset(w for w in words if w not in _TinyEmbed._STOP and len(w) > 1)
 
-    def _encode_numpy(self, text: str) -> list[float]:
-        """Character n-gram hashing with numpy."""
-        vec = self.np.zeros(self.dim, dtype=self.np.float32)
-        text = text.lower().strip()
-        for n in range(1, 4):
-            for i in range(len(text) - n + 1):
-                gram = text[i:i + n]
-                h = int(hashlib.md5(gram.encode()).hexdigest(), 16)
-                idx = h % self.dim
-                vec[idx] += 1.0
-        # Normalize
-        norm = float(self.np.linalg.norm(vec))
-        if norm > 0:
-            vec = vec / norm
-        return vec.tolist()
+    @staticmethod
+    def encode(text: str) -> list[str]:
+        """Return content words as list (used as embedding proxy)."""
+        return list(_TinyEmbed._content_words(text))
 
-    def _encode_pure(self, text: str) -> list[float]:
-        """Pure Python fallback — character hashing without numpy."""
-        vec = [0.0] * self.dim
-        text = text.lower().strip()
-        for n in range(1, 4):
-            for i in range(len(text) - n + 1):
-                gram = text[i:i + n]
-                h = int(hashlib.md5(gram.encode()).hexdigest(), 16)
-                idx = h % self.dim
-                vec[idx] += 1.0
-        norm = math.sqrt(sum(v * v for v in vec))
-        if norm > 0:
-            vec = [v / norm for v in vec]
-        return vec
-
-    def cosine_similarity(self, a: list[float], b: list[float]) -> float:
-        """Cosine similarity between two vectors."""
-        if self._has_numpy:
-            return float(self.np.dot(a, b))
-        dot = sum(x * y for x, y in zip(a, b))
-        return dot  # both are normalized
+    @staticmethod
+    def word_overlap(a: list[str], b: list[str]) -> float:
+        """Dice coefficient on content word sets.
+        
+        Handles asymmetric sizes (short query vs long doc) better than cosine.
+        """
+        set_a, set_b = frozenset(a), frozenset(b)
+        if not set_a or not set_b:
+            return 0.0
+        inter = len(set_a & set_b)
+        return 2.0 * inter / (len(set_a) + len(set_b)) if inter else 0.0
 
 
 class SourceOfTruth:
@@ -106,14 +80,14 @@ class SourceOfTruth:
         doc_id: Optional[str] = None,
     ) -> str:
         doc_id = doc_id or str(uuid.uuid4())
-        emb = self._embedder.encode(content)
+        words = self._embedder.encode(content)
         doc = SourceDocument(
             id=doc_id,
             content=content,
-            embedding=emb,
             metadata=metadata or {},
             source=source,
         )
+        doc.embedding = words  # list[str] content words
         self._docs.append(doc)
         return doc_id
 
@@ -141,11 +115,10 @@ class SourceOfTruth:
 
     def query(self, query: str, top_k: int = 5) -> SourceQueryResult:
         """Query the source of truth. Returns nearest documents and distances."""
-        q_emb = self._embedder.encode(query)
+        q_words = self._embedder.encode(query)
 
         result = SourceQueryResult(
             query=query,
-            query_embedding=q_emb,
             total_docs=len(self._docs),
         )
 
@@ -155,12 +128,11 @@ class SourceOfTruth:
             result.off_topic_reason = "Source of truth is empty"
             return result
 
-        # Compute distances
         scored = []
         for doc in self._docs:
             if doc.embedding:
-                sim = self._embedder.cosine_similarity(q_emb, doc.embedding)
-                dist = 1.0 - sim  # cosine distance
+                sim = self._embedder.word_overlap(q_words, doc.embedding)
+                dist = 1.0 - sim
                 scored.append((dist, doc))
 
         scored.sort(key=lambda x: x[0])

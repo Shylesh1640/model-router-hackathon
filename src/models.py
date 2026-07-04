@@ -56,7 +56,7 @@ class SourceDocument:
     """A single document in the source of truth."""
     id: str
     content: str
-    embedding: Optional[list[float]] = None
+    embedding: Optional[list[str]] = None  # content words (Jaccard) or float vec
     metadata: dict = field(default_factory=dict)
     source: str = ""  # e.g. "manual", "upload", "web"
 
