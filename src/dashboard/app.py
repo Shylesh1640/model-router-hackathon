@@ -1,23 +1,49 @@
 """Model Router Dashboard — FastAPI + WebSocket real-time UI."""
 
-import json
+import csv
 import logging
+import os
 from contextlib import asynccontextmanager
-from typing import Optional
+from pathlib import Path
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Query
 from fastapi.responses import HTMLResponse
-from fastapi.staticfiles import StaticFiles
 
 from src.config import get_config
 from src.models import RouteRequest, RouteResponse
 from src.pipeline import ChatbotPipeline as RoutingPipeline
 from src.constants import ALL_MODELS, FAST_MODELS, THINKING_MODELS, DEEP_MODELS
+from src.sot.source_of_truth import get_sot
 
 logger = logging.getLogger(__name__)
 
 config = get_config()
 pipeline = RoutingPipeline(config)
+
+
+def seed_sot_from_csv(csv_path: str, max_rows: int = 500):
+    """Seed the Source of Truth from a CSV with question/answer columns."""
+    path = Path(csv_path)
+    if not path.exists():
+        logger.warning(f"Seed CSV not found: {csv_path}")
+        return 0
+    sot = get_sot()
+    if sot.count() > 0:
+        logger.info(f"SOT already has {sot.count()} docs, skipping seed")
+        return sot.count()
+    count = 0
+    with open(path) as f:
+        reader = csv.DictReader(f)
+        for i, row in enumerate(reader):
+            if i >= max_rows:
+                break
+            q = row.get("question", row.get("Question", ""))
+            a = row.get("answer", row.get("Answer", ""))
+            if q and a:
+                sot.add_document(f"Q: {q}\nA: {a}", source="alexa-qa")
+                count += 1
+    logger.info(f"Seeded {count} docs into SOT from {csv_path}")
+    return count
 
 # WebSocket connections for live dashboard
 _websockets: list[WebSocket] = []
@@ -57,6 +83,8 @@ pipeline.on_route(broadcast)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Model Router dashboard starting...")
+    seed_path = os.getenv("SOT_SEED_CSV", "data/alexa_qa/train.csv")
+    seed_sot_from_csv(seed_path, max_rows=int(os.getenv("SOT_SEED_MAX", "500")))
     yield
     logger.info("Model Router dashboard stopping.")
 
