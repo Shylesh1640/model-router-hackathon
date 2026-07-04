@@ -28,7 +28,7 @@
       background: rgba(15, 23, 42, 0.5); border-radius: 1rem;
       border: 1px solid #1e293b; padding: 1.5rem; overflow-x: auto;
     }
-    svg { width: 100%; min-width: 1050px; display: block; }
+    svg { width: 100%; min-width: 1100px; display: block; }
     .cards {
       display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
       gap: 1rem; margin-top: 2rem;
@@ -44,6 +44,8 @@
     .card-dot.violet { background: #a78bfa; }
     .card-dot.amber { background: #fbbf24; }
     .card-dot.rose { background: #fb7185; }
+    .card-dot.indigo { background: #818cf8; }
+    .card-dot.orange { background: #fb923c; }
     .card h3 { font-size: 0.875rem; font-weight: 600; }
     .card ul { list-style: none; color: #94a3b8; font-size: 0.75rem; }
     .card li { margin-bottom: 0.375rem; }
@@ -58,12 +60,12 @@
         <div class="pulse-dot"></div>
         <h1>Model Router — Architecture</h1>
       </div>
-      <p class="subtitle">Cost-optimized LLM routing pipeline · Hackathon Project</p>
+      <p class="subtitle">Cost-optimized LLM routing · Launch Hook · Benchmark-Aware · Task Decomposition</p>
     </div>
 
     <!-- Main Diagram -->
     <div class="diagram-container">
-      <svg viewBox="0 0 1050 780">
+      <svg viewBox="0 0 1100 900">
         <defs>
           <marker id="arrow" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
             <polygon points="0 0, 10 3.5, 0 7" fill="#64748b" />
@@ -74,19 +76,21 @@
           <marker id="arrow-emerald" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
             <polygon points="0 0, 10 3.5, 0 7" fill="#34d399" />
           </marker>
-          <marker id="arrow-orange" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
-            <polygon points="0 0, 10 3.5, 0 7" fill="#fb923c" />
-          </marker>
           <marker id="arrow-violet" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
             <polygon points="0 0, 10 3.5, 0 7" fill="#a78bfa" />
+          </marker>
+          <marker id="arrow-rose" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#fb7185" />
+          </marker>
+          <marker id="arrow-indigo" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#818cf8" />
+          </marker>
+          <marker id="arrow-orange" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#fb923c" />
           </marker>
           <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
             <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1e293b" stroke-width="0.5"/>
           </pattern>
-          <filter id="glow">
-            <feGaussianBlur stdDeviation="3" result="blur"/>
-            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-          </filter>
         </defs>
 
         <!-- Background Grid -->
@@ -96,262 +100,345 @@
         <!-- PIPELINE SECTION BOUNDARIES (vertical lanes)                     -->
         <!-- ================================================================ -->
 
-        <!-- Input Lane -->
-        <rect x="20" y="60" width="130" height="600" rx="8" fill="rgba(30, 41, 59, 0.2)" stroke="#334155" stroke-width="1" stroke-dasharray="4,4"/>
-        <text x="85" y="80" fill="#64748b" font-size="9" text-anchor="middle" font-weight="600">INPUT</text>
+        <!-- Lanes -->
+        <rect x="20" y="80" width="120" height="780" rx="8" fill="rgba(30, 41, 59, 0.2)" stroke="#334155" stroke-width="1" stroke-dasharray="4,4"/>
+        <text x="80" y="100" fill="#64748b" font-size="9" text-anchor="middle" font-weight="600">INPUT</text>
 
-        <!-- Classification Lane -->
-        <rect x="170" y="60" width="180" height="600" rx="8" fill="rgba(8, 51, 68, 0.15)" stroke="#22d3ee" stroke-width="0.5" stroke-dasharray="4,4"/>
-        <text x="260" y="80" fill="#22d3ee" font-size="9" text-anchor="middle" font-weight="600">CLASSIFICATION</text>
+        <rect x="160" y="80" width="160" height="780" rx="8" fill="rgba(99, 102, 241, 0.1)" stroke="#818cf8" stroke-width="0.5" stroke-dasharray="4,4"/>
+        <text x="240" y="100" fill="#818cf8" font-size="9" text-anchor="middle" font-weight="600">DECOMPOSITION</text>
 
-        <!-- Routing Lane -->
-        <rect x="370" y="60" width="160" height="600" rx="8" fill="rgba(6, 78, 59, 0.15)" stroke="#34d399" stroke-width="0.5" stroke-dasharray="4,4"/>
-        <text x="450" y="80" fill="#34d399" font-size="9" text-anchor="middle" font-weight="600">ROUTING</text>
+        <rect x="340" y="80" width="150" height="780" rx="8" fill="rgba(8, 51, 68, 0.15)" stroke="#22d3ee" stroke-width="0.5" stroke-dasharray="4,4"/>
+        <text x="415" y="100" fill="#22d3ee" font-size="9" text-anchor="middle" font-weight="600">CLASSIFICATION</text>
 
-        <!-- Execution Lane -->
-        <rect x="550" y="60" width="240" height="600" rx="8" fill="rgba(120, 53, 15, 0.15)" stroke="#fbbf24" stroke-width="0.5" stroke-dasharray="4,4"/>
-        <text x="670" y="80" fill="#fbbf24" font-size="9" text-anchor="middle" font-weight="600">EXECUTION</text>
+        <rect x="510" y="80" width="150" height="780" rx="8" fill="rgba(6, 78, 59, 0.15)" stroke="#34d399" stroke-width="0.5" stroke-dasharray="4,4"/>
+        <text x="585" y="100" fill="#34d399" font-size="9" text-anchor="middle" font-weight="600">ROUTING</text>
 
-        <!-- Output Lane -->
-        <rect x="810" y="60" width="220" height="600" rx="8" fill="rgba(76, 29, 149, 0.15)" stroke="#a78bfa" stroke-width="0.5" stroke-dasharray="4,4"/>
-        <text x="920" y="80" fill="#a78bfa" font-size="9" text-anchor="middle" font-weight="600">OUTPUT</text>
+        <rect x="680" y="80" width="240" height="780" rx="8" fill="rgba(120, 53, 15, 0.15)" stroke="#fbbf24" stroke-width="0.5" stroke-dasharray="4,4"/>
+        <text x="800" y="100" fill="#fbbf24" font-size="9" text-anchor="middle" font-weight="600">EXECUTION</text>
 
-        <!-- ================================================================ -->
-        <!-- COMPONENTS                                                       -->
-        <!-- ================================================================ -->
-
-        <!-- User / CLI -->
-        <rect x="35" y="100" width="100" height="60" rx="6" fill="rgba(30, 41, 59, 0.5)" stroke="#94a3b8" stroke-width="1.5"/>
-        <text x="85" y="123" fill="white" font-size="11" font-weight="600" text-anchor="middle">User</text>
-        <text x="85" y="139" fill="#94a3b8" font-size="9" text-anchor="middle">CLI / API</text>
-
-        <!-- Dashboard / WebSocket -->
-        <rect x="35" y="200" width="100" height="70" rx="6" fill="rgba(8, 51, 68, 0.4)" stroke="#22d3ee" stroke-width="1.5"/>
-        <text x="85" y="223" fill="white" font-size="11" font-weight="600" text-anchor="middle">Dashboard</text>
-        <text x="85" y="239" fill="#94a3b8" font-size="9" text-anchor="middle">FastAPI</text>
-        <text x="85" y="255" fill="#22d3ee" font-size="8" text-anchor="middle">WebSocket</text>
-
-        <!-- Arrow: User → Dashboard -->
-        <line x1="85" y1="160" x2="85" y2="198" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrow-cyan)"/>
-
-        <!-- Arrow: User → Classification -->
-        <line x1="135" y1="130" x2="185" y2="130" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow)"/>
-        <text x="160" y="124" fill="#94a3b8" font-size="8" text-anchor="middle">query</text>
-
-        <!-- Complexity Classifier -->
-        <rect x="185" y="100" width="150" height="70" rx="6" fill="rgba(8, 51, 68, 0.4)" stroke="#22d3ee" stroke-width="1.5"/>
-        <text x="260" y="120" fill="white" font-size="11" font-weight="600" text-anchor="middle">ComplexityClassifier</text>
-        <text x="260" y="136" fill="#94a3b8" font-size="9" text-anchor="middle">simple · medium · hard</text>
-        <text x="260" y="152" fill="#22d3ee" font-size="8" text-anchor="middle">heuristic + embedding</text>
-
-        <!-- Task Detector (inside classification) -->
-        <rect x="185" y="200" width="150" height="60" rx="6" fill="rgba(8, 51, 68, 0.35)" stroke="#22d3ee" stroke-width="1.2"/>
-        <text x="260" y="222" fill="white" font-size="11" font-weight="600" text-anchor="middle">Task Classification</text>
-        <text x="260" y="240" fill="#94a3b8" font-size="9" text-anchor="middle">conversation · code · general</text>
-
-        <!-- Arrow: Classifier → Task -->
-        <line x1="260" y1="170" x2="260" y2="198" stroke="#22d3ee" stroke-width="1.2" marker-end="url(#arrow-cyan)"/>
-
-        <!-- Arrow: Classification → Routing -->
-        <line x1="335" y1="140" x2="385" y2="140" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrow-cyan)"/>
-        <text x="360" y="134" fill="#22d3ee" font-size="8" text-anchor="middle">complexity</text>
-
-        <!-- CostRouter -->
-        <rect x="385" y="100" width="130" height="70" rx="6" fill="rgba(6, 78, 59, 0.4)" stroke="#34d399" stroke-width="1.5"/>
-        <text x="450" y="120" fill="white" font-size="11" font-weight="600" text-anchor="middle">CostRouter</text>
-        <text x="450" y="136" fill="#94a3b8" font-size="9" text-anchor="middle">tier selection</text>
-        <text x="450" y="152" fill="#34d399" font-size="8" text-anchor="middle">confidence override</text>
-
-        <!-- Cascade -->
-        <rect x="385" y="210" width="130" height="70" rx="6" fill="rgba(136, 19, 55, 0.4)" stroke="#fb7185" stroke-width="1.5"/>
-        <text x="450" y="230" fill="white" font-size="11" font-weight="600" text-anchor="middle">Cascade</text>
-        <text x="450" y="246" fill="#94a3b8" font-size="9" text-anchor="middle">self-verify · escalate</text>
-        <text x="450" y="262" fill="#fb7185" font-size="8" text-anchor="middle">max 1 hop</text>
-
-        <!-- Arrow: CostRouter → Cascade -->
-        <line x1="450" y1="170" x2="450" y2="208" stroke="#34d399" stroke-width="1.2" marker-end="url(#arrow-emerald)"/>
-
-        <!-- Arrow: Routing → Execution -->
-        <line x1="515" y1="130" x2="565" y2="130" stroke="#34d399" stroke-width="1.5" marker-end="url(#arrow-emerald)"/>
-        <text x="540" y="124" fill="#34d399" font-size="8" text-anchor="middle">model_id</text>
+        <rect x="940" y="80" width="140" height="780" rx="8" fill="rgba(76, 29, 149, 0.15)" stroke="#a78bfa" stroke-width="0.5" stroke-dasharray="4,4"/>
+        <text x="1010" y="100" fill="#a78bfa" font-size="9" text-anchor="middle" font-weight="600">OUTPUT</text>
 
         <!-- ================================================================ -->
-        <!-- MODEL POOL (3 tiers in the execution lane)                       -->
+        <!-- INPUT LAYER                                                      -->
         <!-- ================================================================ -->
 
-        <!-- FAST Tier -->
-        <rect x="565" y="100" width="210" height="90" rx="6" fill="rgba(22, 101, 52, 0.2)" stroke="#22c55e" stroke-width="1.2"/>
-        <text x="575" y="116" fill="#86efac" font-size="9" font-weight="600">FAST TIER</text>
-        <text x="575" y="132" fill="#94a3b8" font-size="8">Llama 3.2 3B</text>
-        <text x="575" y="146" fill="#94a3b8" font-size="8">Liquid LFM 1.2B</text>
-        <text x="575" y="160" fill="#94a3b8" font-size="8">→ cheapest, instant</text>
-        <text x="575" y="178" fill="#22c55e" font-size="7">greetings · facts · simple Q&A</text>
+        <rect x="30" y="120" width="100" height="60" rx="6" fill="rgba(30, 41, 59, 0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+        <text x="80" y="143" fill="white" font-size="11" font-weight="600" text-anchor="middle">User</text>
+        <text x="80" y="159" fill="#94a3b8" font-size="9" text-anchor="middle">CLI / API</text>
 
-        <!-- THINKING Tier -->
-        <rect x="565" y="210" width="210" height="90" rx="6" fill="rgba(146, 64, 14, 0.2)" stroke="#f59e0b" stroke-width="1.2"/>
-        <text x="575" y="226" fill="#fcd34d" font-size="9" font-weight="600">THINKING TIER</text>
-        <text x="575" y="242" fill="#94a3b8" font-size="8">GPT-OSS-20b · Laguna XS.2</text>
-        <text x="575" y="256" fill="#94a3b8" font-size="8">North Mini Code · Nemotron Nano</text>
-        <text x="575" y="270" fill="#94a3b8" font-size="8">Gemma 4 · Qwen3 Next 80B</text>
-        <text x="575" y="288" fill="#f59e0b" font-size="7">explanation · review · medium reasoning</text>
+        <rect x="30" y="210" width="100" height="70" rx="6" fill="rgba(8, 51, 68, 0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+        <text x="80" y="233" fill="white" font-size="11" font-weight="600" text-anchor="middle">Dashboard</text>
+        <text x="80" y="249" fill="#94a3b8" font-size="9" text-anchor="middle">FastAPI</text>
+        <text x="80" y="265" fill="#22d3ee" font-size="8" text-anchor="middle">WebSocket</text>
 
-        <!-- DEEP Tier -->
-        <rect x="565" y="320" width="210" height="90" rx="6" fill="rgba(88, 28, 135, 0.2)" stroke="#a855f7" stroke-width="1.2"/>
-        <text x="575" y="336" fill="#d8b4fe" font-size="9" font-weight="600">DEEP TIER</text>
-        <text x="575" y="352" fill="#94a3b8" font-size="8">Llama 3.3 70B · GPT-OSS-120b</text>
-        <text x="575" y="366" fill="#94a3b8" font-size="8">Laguna M.1 · Nemotron 3 Super</text>
-        <text x="575" y="380" fill="#94a3b8" font-size="8">Qwen3 Coder 480B · Hermes 405B</text>
-        <text x="575" y="398" fill="#a855f7" font-size="7">debugging · generation · multi-step</text>
+        <line x1="80" y1="180" x2="80" y2="208" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrow-cyan)"/>
+
+        <!-- ================================================================ -->
+        <!-- DECOMPOSITION LAYER                                              -->
+        <!-- ================================================================ -->
+
+        <line x1="130" y1="150" x2="175" y2="150" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow)"/>
+        <text x="152" y="144" fill="#94a3b8" font-size="8" text-anchor="middle">query</text>
+
+        <rect x="175" y="120" width="130" height="90" rx="6" fill="rgba(99, 102, 241, 0.35)" stroke="#818cf8" stroke-width="1.5"/>
+        <text x="240" y="140" fill="white" font-size="11" font-weight="600" text-anchor="middle">Task Decomposer</text>
+        <text x="240" y="156" fill="#94a3b8" font-size="8" text-anchor="middle">multi-step?</text>
+        <text x="240" y="170" fill="#94a3b8" font-size="8" text-anchor="middle">sequential · parallel</text>
+        <text x="240" y="184" fill="#818cf8" font-size="8" text-anchor="middle">then, after, first...finally</text>
+        <text x="240" y="198" fill="#818cf8" font-size="7" text-anchor="middle">pipeline verbs</text>
+
+        <!-- Decomposer → SubTask fan-out -->
+        <rect x="175" y="240" width="130" height="50" rx="4" fill="rgba(99, 102, 241, 0.2)" stroke="#818cf8" stroke-width="1" stroke-dasharray="3,3"/>
+        <text x="240" y="260" fill="#c7d2fe" font-size="9" font-weight="600" text-anchor="middle">Sub-Task 1</text>
+        <text x="240" y="276" fill="#94a3b8" font-size="8" text-anchor="middle">fetches stock data</text>
+
+        <rect x="175" y="300" width="130" height="50" rx="4" fill="rgba(99, 102, 241, 0.2)" stroke="#818cf8" stroke-width="1" stroke-dasharray="3,3"/>
+        <text x="240" y="320" fill="#c7d2fe" font-size="9" font-weight="600" text-anchor="middle">Sub-Task 2</text>
+        <text x="240" y="336" fill="#94a3b8" font-size="8" text-anchor="middle">plots candlestick</text>
+
+        <rect x="175" y="360" width="130" height="50" rx="4" fill="rgba(99, 102, 241, 0.2)" stroke="#818cf8" stroke-width="1" stroke-dasharray="3,3"/>
+        <text x="240" y="380" fill="#c7d2fe" font-size="9" font-weight="600" text-anchor="middle">Sub-Task N</text>
+        <text x="240" y="396" fill="#94a3b8" font-size="8" text-anchor="middle">...</text>
+
+        <line x1="240" y1="210" x2="240" y2="238" stroke="#818cf8" stroke-width="1.2" marker-end="url(#arrow-indigo)"/>
+
+        <!-- Each sub-task routes independently through the pipeline -->
+        <path d="M 305 265 L 350 265 L 350 145 L 355 145" fill="none" stroke="#818cf8" stroke-width="1.2" stroke-dasharray="3,3" marker-end="url(#arrow)"/>
+        <path d="M 305 325 L 350 325 L 350 160 L 355 160" fill="none" stroke="#818cf8" stroke-width="1.2" stroke-dasharray="3,3" marker-end="url(#arrow)"/>
+        <path d="M 305 385 L 350 385 L 350 175 L 355 175" fill="none" stroke="#818cf8" stroke-width="1.2" stroke-dasharray="3,3" marker-end="url(#arrow)"/>
+
+        <!-- Single query (no decomposition) → Classification -->
+        <path d="M 305 150 L 355 150" fill="none" stroke="#818cf8" stroke-width="1.5" marker-end="url(#arrow-indigo)"/>
+        <text x="340" y="130" fill="#818cf8" font-size="8" text-anchor="middle">single or decomposed</text>
+
+        <!-- Decomposer → Assemble result path (right side) -->
+        <path d="M 240 410 L 240 480 L 1010 480 L 1010 200" fill="none" stroke="#818cf8" stroke-width="1.2" stroke-dasharray="4,3" marker-end="url(#arrow-violet)"/>
+        <text x="600" y="490" fill="#818cf8" font-size="8" text-anchor="middle">results assembled</text>
+
+        <!-- ================================================================ -->
+        <!-- CLASSIFICATION LAYER                                             -->
+        <!-- ================================================================ -->
+
+        <rect x="350" y="120" width="130" height="70" rx="6" fill="rgba(8, 51, 68, 0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+        <text x="415" y="140" fill="white" font-size="11" font-weight="600" text-anchor="middle">ComplexityClassifier</text>
+        <text x="415" y="156" fill="#94a3b8" font-size="9" text-anchor="middle">simple · medium · hard</text>
+        <text x="415" y="172" fill="#22d3ee" font-size="8" text-anchor="middle">heuristic + embedding</text>
+
+        <rect x="350" y="220" width="130" height="55" rx="6" fill="rgba(8, 51, 68, 0.35)" stroke="#22d3ee" stroke-width="1.2"/>
+        <text x="415" y="240" fill="white" font-size="11" font-weight="600" text-anchor="middle">Task Classification</text>
+        <text x="415" y="258" fill="#94a3b8" font-size="9" text-anchor="middle">code · reasoning · general</text>
+
+        <line x1="415" y1="190" x2="415" y2="218" stroke="#22d3ee" stroke-width="1.2" marker-end="url(#arrow-cyan)"/>
+
+        <!-- ================================================================ -->
+        <!-- ROUTING LAYER                                                    -->
+        <!-- ================================================================ -->
+
+        <line x1="480" y1="150" x2="525" y2="150" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrow-cyan)"/>
+        <text x="502" y="144" fill="#22d3ee" font-size="8" text-anchor="middle">complexity</text>
+
+        <rect x="525" y="120" width="120" height="70" rx="6" fill="rgba(6, 78, 59, 0.4)" stroke="#34d399" stroke-width="1.5"/>
+        <text x="585" y="140" fill="white" font-size="11" font-weight="600" text-anchor="middle">CostRouter</text>
+        <text x="585" y="156" fill="#94a3b8" font-size="9" text-anchor="middle">benchmark-aware</text>
+        <text x="585" y="172" fill="#34d399" font-size="8" text-anchor="middle">confidence override</text>
+
+        <rect x="525" y="220" width="120" height="60" rx="6" fill="rgba(136, 19, 55, 0.4)" stroke="#fb7185" stroke-width="1.5"/>
+        <text x="585" y="240" fill="white" font-size="11" font-weight="600" text-anchor="middle">Cascade</text>
+        <text x="585" y="256" fill="#94a3b8" font-size="9" text-anchor="middle">self-verify · escalate</text>
+
+        <line x1="585" y1="190" x2="585" y2="218" stroke="#34d399" stroke-width="1.2" marker-end="url(#arrow-emerald)"/>
+
+        <!-- ================================================================ -->
+        <!-- BENCHMARK RESOLVER (supporting component, below routing)         -->
+        <!-- ================================================================ -->
+
+        <rect x="360" y="650" width="160" height="100" rx="6" fill="rgba(99, 102, 241, 0.15)" stroke="#818cf8" stroke-width="1.2" stroke-dasharray="4,3"/>
+        <text x="440" y="670" fill="#c7d2fe" font-size="10" font-weight="600" text-anchor="middle">BenchmarkResolver</text>
+        <text x="440" y="688" fill="#94a3b8" font-size="8" text-anchor="middle">SWE-bench verified</text>
+        <text x="440" y="702" fill="#94a3b8" font-size="8" text-anchor="middle">MMLU-Pro</text>
+        <text x="440" y="716" fill="#94a3b8" font-size="8" text-anchor="middle">HumanEval · LiveCodeBench</text>
+        <text x="440" y="730" fill="#94a3b8" font-size="8" text-anchor="middle">SimpleQA</text>
+        <text x="440" y="745" fill="#818cf8" font-size="7" text-anchor="middle">benchmark → routing weight</text>
+
+        <!-- Arrow: BenchmarkResolver → CostRouter -->
+        <path d="M 520 700 L 585 200" fill="none" stroke="#818cf8" stroke-width="1.2" stroke-dasharray="4,3" marker-end="url(#arrow-indigo)"/>
+        <text x="578" y="440" fill="#818cf8" font-size="7">scores</text>
+
+        <!-- ================================================================ -->
+        <!-- LAUNCH HOOK (startup component)                                  -->
+        <!-- ================================================================ -->
+
+        <rect x="360" y="790" width="160" height="55" rx="6" fill="rgba(251, 146, 60, 0.2)" stroke="#fb923c" stroke-width="1.2" stroke-dasharray="4,3"/>
+        <text x="440" y="810" fill="#fdba74" font-size="10" font-weight="600" text-anchor="middle">Launch Hook</text>
+        <text x="440" y="826" fill="#94a3b8" font-size="8" text-anchor="middle">scrapes provider on start</text>
+        <text x="440" y="838" fill="#fb923c" font-size="7" text-anchor="middle">detects API key → auto-scrape</text>
+
+        <!-- Arrow: Launch Hook → BenchmarkResolver -->
+        <line x1="440" y1="790" x2="440" y2="752" stroke="#fb923c" stroke-width="1.2" marker-end="url(#arrow-orange)"/>
+        <text x="450" y="776" fill="#fb923c" font-size="7">feeds benchmarks</text>
+
+        <!-- Arrow: Launch Hook → Model Pool -->
+        <path d="M 520 815 L 800 815 L 800 470" fill="none" stroke="#fb923c" stroke-width="1.2" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+        <text x="660" y="808" fill="#fb923c" font-size="7">model list</text>
+
+        <!-- ================================================================ -->
+        <!-- MODEL POOL                                                       -->
+        <!-- ================================================================ -->
+
+        <rect x="695" y="120" width="210" height="90" rx="6" fill="rgba(22, 101, 52, 0.2)" stroke="#22c55e" stroke-width="1.2"/>
+        <text x="705" y="136" fill="#86efac" font-size="9" font-weight="600">FAST TIER — <3B params</text>
+        <text x="705" y="152" fill="#94a3b8" font-size="8">Llama 3.2 3B · Liquid 1.2B (×2)</text>
+        <text x="705" y="166" fill="#94a3b8" font-size="8">→ cheapest, instant</text>
+        <text x="705" y="182" fill="#22c55e" font-size="7">greetings · facts · simple Q&A</text>
+
+        <rect x="695" y="230" width="210" height="110" rx="6" fill="rgba(146, 64, 14, 0.2)" stroke="#f59e0b" stroke-width="1.2"/>
+        <text x="705" y="246" fill="#fcd34d" font-size="9" font-weight="600">THINKING TIER — 3B-12B active</text>
+        <text x="705" y="262" fill="#94a3b8" font-size="8">GPT-OSS-20b  ·  Laguna XS.2</text>
+        <text x="705" y="276" fill="#94a3b8" font-size="8">North Mini Code  ·  Nemotron Nano</text>
+        <text x="705" y="290" fill="#94a3b8" font-size="8">Gemma 4  ·  Qwen3 Next 80B</text>
+        <text x="705" y="306" fill="#94a3b8" font-size="8">Venice Uncensored  ·  +4 more</text>
+        <text x="705" y="324" fill="#f59e0b" font-size="7">explanation · review · medium reasoning</text>
+
+        <rect x="695" y="360" width="210" height="110" rx="6" fill="rgba(88, 28, 135, 0.2)" stroke="#a855f7" stroke-width="1.2"/>
+        <text x="705" y="376" fill="#d8b4fe" font-size="9" font-weight="600">DEEP TIER — 10B+ active / 70B+ dense</text>
+        <text x="705" y="392" fill="#94a3b8" font-size="8">Llama 3.3 70B  ·  GPT-OSS-120b</text>
+        <text x="705" y="406" fill="#94a3b8" font-size="8">Laguna M.1  ·  Nemotron 3 Super</text>
+        <text x="705" y="420" fill="#94a3b8" font-size="8">Nemotron 3 Ultra (550B)  ·   Hermes 405B</text>
+        <text x="705" y="434" fill="#94a3b8" font-size="8">Qwen3 Coder 480B  ·  +2 more</text>
+        <text x="705" y="452" fill="#a855f7" font-size="7">debugging · code gen · multi-step reasoning</text>
+
+        <!-- Arrow: Router → Model Pool -->
+        <line x1="645" y1="150" x2="693" y2="150" stroke="#34d399" stroke-width="1.5" marker-end="url(#arrow-emerald)"/>
+        <text x="670" y="144" fill="#34d399" font-size="8" text-anchor="middle">model_id</text>
 
         <!-- Arrow: Cascade → Thinking (escalation path) -->
-        <path d="M 385 245 L 350 245 L 350 255 L 563 255" fill="none" stroke="#fb7185" stroke-width="1.5" stroke-dasharray="5,4" marker-end="url(#arrow-violet)"/>
-        <text x="440" y="242" fill="#fb7185" font-size="7" text-anchor="middle">escalation on low confidence</text>
-
-        <!-- Arrow: cascade back to fast for self-verify check -->
-        <path d="M 450 280 L 450 310 L 450 320 L 450 340" fill="none" stroke="#fb7185" stroke-width="1.2" stroke-dasharray="3,3" marker-end="url(#arrow-violet)"/>
-        <text x="462" y="310" fill="#fb7185" font-size="7">self-verify</text>
-
-        <!-- ================================================================ -->
-        <!-- ARROWS: Model Pool → Response                                    -->
-        <!-- ================================================================ -->
-
-        <!-- Fast → Response -->
-        <path d="M 670 145 L 740 145 L 800 145" fill="none" stroke="#22c55e" stroke-width="1.5" marker-end="url(#arrow)"/>
-        <!-- Thinking → Response -->
-        <path d="M 670 255 L 740 255 L 800 255" fill="none" stroke="#f59e0b" stroke-width="1.5" marker-end="url(#arrow)"/>
-        <!-- Deep → Response -->
-        <path d="M 670 365 L 740 365 L 800 365" fill="none" stroke="#a855f7" stroke-width="1.5" marker-end="url(#arrow)"/>
-
-        <!-- ================================================================ -->
-        <!-- RESPONSE HANDLER                                                 -->
-        <!-- ================================================================ -->
-
-        <rect x="825" y="100" width="190" height="60" rx="6" fill="rgba(76, 29, 149, 0.4)" stroke="#a78bfa" stroke-width="1.5"/>
-        <text x="920" y="123" fill="white" font-size="11" font-weight="600" text-anchor="middle">Response</text>
-        <text x="920" y="139" fill="#94a3b8" font-size="9" text-anchor="middle">+ routing metadata</text>
-
-        <!-- History Store -->
-        <rect x="825" y="200" width="190" height="60" rx="6" fill="rgba(76, 29, 149, 0.35)" stroke="#a78bfa" stroke-width="1.2"/>
-        <text x="920" y="223" fill="white" font-size="11" font-weight="600" text-anchor="middle">History Store</text>
-        <text x="920" y="239" fill="#94a3b8" font-size="9" text-anchor="middle">last 1000 routes</text>
-
-        <!-- Stats Aggregator -->
-        <rect x="825" y="300" width="190" height="60" rx="6" fill="rgba(76, 29, 149, 0.35)" stroke="#a78bfa" stroke-width="1.2"/>
-        <text x="920" y="323" fill="white" font-size="11" font-weight="600" text-anchor="middle">Stats Aggregator</text>
-        <text x="920" y="339" fill="#94a3b8" font-size="9" text-anchor="middle">tier dist · escalation rate</text>
-
-        <!-- Arrow: Response → History -->
-        <line x1="920" y1="160" x2="920" y2="198" stroke="#a78bfa" stroke-width="1.2" marker-end="url(#arrow-violet)"/>
-        <!-- Arrow: History → Stats -->
-        <line x1="920" y1="260" x2="920" y2="298" stroke="#a78bfa" stroke-width="1.2" marker-end="url(#arrow-violet)"/>
-
-        <!-- Arrow: History → Dashboard (WebSocket) -->
-        <path d="M 825 230 L 420 230 L 200 230 L 137 230" fill="none" stroke="#22d3ee" stroke-width="1.2" stroke-dasharray="4,3" marker-end="url(#arrow-cyan)"/>
-        <text x="450" y="224" fill="#22d3ee" font-size="8" text-anchor="middle">WebSocket push (live)</text>
+        <path d="M 525 250 L 400 250 L 400 285 L 693 285" fill="none" stroke="#fb7185" stroke-width="1.5" stroke-dasharray="5,4" marker-end="url(#arrow-rose)"/>
+        <text x="550" y="265" fill="#fb7185" font-size="7">escalation</text>
 
         <!-- ================================================================ -->
         <!-- OPENROUTER API (external cloud)                                  -->
         <!-- ================================================================ -->
 
-        <rect x="565" y="470" width="210" height="60" rx="6" fill="rgba(30, 41, 59, 0.5)" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="4,3"/>
-        <text x="670" y="493" fill="white" font-size="11" font-weight="600" text-anchor="middle">OpenRouter API</text>
-        <text x="670" y="509" fill="#94a3b8" font-size="9" text-anchor="middle">cloud inference</text>
+        <rect x="695" y="520" width="210" height="55" rx="6" fill="rgba(30, 41, 59, 0.5)" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="4,3"/>
+        <text x="800" y="542" fill="white" font-size="11" font-weight="600" text-anchor="middle">OpenRouter API</text>
+        <text x="800" y="558" fill="#94a3b8" font-size="9" text-anchor="middle">cloud inference (27 free models)</text>
 
-        <!-- Arrow: Model Pool → OpenRouter -->
-        <line x1="670" y1="410" x2="670" y2="468" stroke="#94a3b8" stroke-width="1.2" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
-        <text x="680" y="440" fill="#94a3b8" font-size="8">API call</text>
-
-        <!-- Arrow: OpenRouter → Response -->
-        <path d="M 775 500 L 800 500 L 825 130" fill="none" stroke="#94a3b8" stroke-width="1.2" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
-        <text x="840" y="280" fill="#94a3b8" font-size="8" transform="rotate(-70, 840, 280)">response</text>
+        <line x1="800" y1="470" x2="800" y2="518" stroke="#94a3b8" stroke-width="1.2" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+        <text x="810" y="498" fill="#94a3b8" font-size="7">API call</text>
 
         <!-- ================================================================ -->
-        <!-- DECISION TABLE — what maps to what                                -->
+        <!-- OUTPUT LAYER                                                     -->
         <!-- ================================================================ -->
 
-        <rect x="20" y="460" width="320" height="180" rx="8" fill="rgba(15, 23, 42, 0.6)" stroke="#334155" stroke-width="1"/>
-        <text x="30" y="480" fill="white" font-size="10" font-weight="600">Routing Decision Matrix</text>
+        <!-- Response from each tier -->
+        <path d="M 800 165 L 870 165 L 940 165" fill="none" stroke="#22c55e" stroke-width="1.5" marker-end="url(#arrow)"/>
+        <path d="M 800 285 L 870 285 L 940 285" fill="none" stroke="#f59e0b" stroke-width="1.5" marker-end="url(#arrow)"/>
+        <path d="M 800 415 L 870 415 L 940 415" fill="none" stroke="#a855f7" stroke-width="1.5" marker-end="url(#arrow)"/>
+        <path d="M 905 520 L 940 520" fill="none" stroke="#94a3b8" stroke-width="1.2" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
 
-        <!-- Table header -->
-        <rect x="30" y="490" width="80" height="22" rx="2" fill="#1e293b" stroke="#334155" stroke-width="0.5"/>
-        <text x="70" y="504" fill="#94a3b8" font-size="8" text-anchor="middle">Complexity</text>
-        <rect x="115" y="490" width="60" height="22" rx="2" fill="#1e293b" stroke="#334155" stroke-width="0.5"/>
-        <text x="145" y="504" fill="#94a3b8" font-size="8" text-anchor="middle">Tier</text>
-        <rect x="180" y="490" width="80" height="22" rx="2" fill="#1e293b" stroke="#334155" stroke-width="0.5"/>
-        <text x="220" y="504" fill="#94a3b8" font-size="8" text-anchor="middle">Default Model</text>
-        <rect x="265" y="490" width="65" height="22" rx="2" fill="#1e293b" stroke="#334155" stroke-width="0.5"/>
-        <text x="297" y="504" fill="#94a3b8" font-size="8" text-anchor="middle">Override</text>
+        <rect x="950" y="120" width="120" height="55" rx="6" fill="rgba(76, 29, 149, 0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+        <text x="1010" y="140" fill="white" font-size="11" font-weight="600" text-anchor="middle">Response</text>
+        <text x="1010" y="156" fill="#94a3b8" font-size="9" text-anchor="middle">+ routing metadata</text>
 
-        <!-- Row 1: Simple → Fast -->
-        <rect x="30" y="515" width="80" height="20" rx="2" fill="rgba(22, 101, 52, 0.2)"/>
-        <text x="70" y="529" fill="#86efac" font-size="8" text-anchor="middle">simple</text>
-        <rect x="115" y="515" width="60" height="20" rx="2" fill="rgba(22, 101, 52, 0.15)"/>
-        <text x="145" y="529" fill="#94a3b8" font-size="8" text-anchor="middle">fast</text>
-        <rect x="180" y="515" width="80" height="20" rx="2" fill="rgba(22, 101, 52, 0.1)"/>
-        <text x="220" y="529" fill="#94a3b8" font-size="7" text-anchor="middle">Liquid 1.2B</text>
-        <rect x="265" y="515" width="65" height="20" rx="2" fill="rgba(22, 101, 52, 0.1)"/>
-        <text x="297" y="529" fill="#94a3b8" font-size="7" text-anchor="middle">—</text>
+        <rect x="950" y="200" width="120" height="55" rx="6" fill="rgba(76, 29, 149, 0.35)" stroke="#a78bfa" stroke-width="1.2"/>
+        <text x="1010" y="220" fill="white" font-size="11" font-weight="600" text-anchor="middle">History</text>
+        <text x="1010" y="236" fill="#94a3b8" font-size="9" text-anchor="middle">last 1000 routes</text>
 
-        <!-- Row 2: Medium → Thinking -->
-        <rect x="30" y="538" width="80" height="20" rx="2" fill="rgba(146, 64, 14, 0.2)"/>
-        <text x="70" y="552" fill="#fcd34d" font-size="8" text-anchor="middle">medium</text>
-        <rect x="115" y="538" width="60" height="20" rx="2" fill="rgba(146, 64, 14, 0.15)"/>
-        <text x="145" y="552" fill="#94a3b8" font-size="8" text-anchor="middle">thinking</text>
-        <rect x="180" y="538" width="80" height="20" rx="2" fill="rgba(146, 64, 14, 0.1)"/>
-        <text x="220" y="552" fill="#94a3b8" font-size="7" text-anchor="middle">GPT-OSS-20b</text>
-        <rect x="265" y="538" width="65" height="20" rx="2" fill="rgba(146, 64, 14, 0.1)"/>
-        <text x="297" y="552" fill="#94a3b8" font-size="7" text-anchor="middle">—</text>
+        <rect x="950" y="280" width="120" height="55" rx="6" fill="rgba(76, 29, 149, 0.35)" stroke="#a78bfa" stroke-width="1.2"/>
+        <text x="1010" y="300" fill="white" font-size="11" font-weight="600" text-anchor="middle">Stats</text>
+        <text x="1010" y="316" fill="#94a3b8" font-size="9" text-anchor="middle">tier dist · escalation</text>
 
-        <!-- Row 3: Hard → Deep -->
-        <rect x="30" y="561" width="80" height="20" rx="2" fill="rgba(88, 28, 135, 0.2)"/>
-        <text x="70" y="575" fill="#d8b4fe" font-size="8" text-anchor="middle">hard</text>
-        <rect x="115" y="561" width="60" height="20" rx="2" fill="rgba(88, 28, 135, 0.15)"/>
-        <text x="145" y="575" fill="#94a3b8" font-size="8" text-anchor="middle">deep</text>
-        <rect x="180" y="561" width="80" height="20" rx="2" fill="rgba(88, 28, 135, 0.1)"/>
-        <text x="220" y="575" fill="#94a3b8" font-size="7" text-anchor="middle">Llama 3.3 70B</text>
-        <rect x="265" y="561" width="65" height="20" rx="2" fill="rgba(88, 28, 135, 0.1)"/>
-        <text x="297" y="575" fill="#94a3b8" font-size="7" text-anchor="middle">—</text>
+        <line x1="1010" y1="175" x2="1010" y2="198" stroke="#a78bfa" stroke-width="1.2" marker-end="url(#arrow-violet)"/>
+        <line x1="1010" y1="255" x2="1010" y2="278" stroke="#a78bfa" stroke-width="1.2" marker-end="url(#arrow-violet)"/>
 
-        <!-- Row 4: Low confidence → bump -->
-        <rect x="30" y="584" width="80" height="20" rx="2" fill="rgba(136, 19, 55, 0.2)"/>
-        <text x="70" y="598" fill="#fda4af" font-size="7" text-anchor="middle">conf < 0.4</text>
-        <rect x="115" y="584" width="60" height="20" rx="2" fill="rgba(136, 19, 55, 0.15)"/>
-        <text x="145" y="598" fill="#94a3b8" font-size="8" text-anchor="middle">bump +1</text>
-        <rect x="180" y="584" width="80" height="20" rx="2" fill="rgba(136, 19, 55, 0.1)"/>
-        <text x="220" y="598" fill="#94a3b8" font-size="7" text-anchor="middle">next tier up</text>
-        <rect x="265" y="584" width="65" height="20" rx="2" fill="rgba(136, 19, 55, 0.1)"/>
-        <text x="297" y="598" fill="#fda4af" font-size="7" text-anchor="middle">auto</text>
+        <!-- WebSocket: History → Dashboard -->
+        <path d="M 950 220 L 450 220 L 200 220 L 132 240" fill="none" stroke="#22d3ee" stroke-width="1.2" stroke-dasharray="4,3" marker-end="url(#arrow-cyan)"/>
+        <text x="400" y="214" fill="#22d3ee" font-size="8" text-anchor="middle">WebSocket push (live)</text>
+
+        <!-- ================================================================ -->
+        <!-- DECISION MATRIX                                                  -->
+        <!-- ================================================================ -->
+
+        <rect x="20" y="520" width="300" height="240" rx="8" fill="rgba(15, 23, 42, 0.6)" stroke="#334155" stroke-width="1"/>
+        <text x="30" y="540" fill="white" font-size="10" font-weight="600">Routing Decision Matrix</text>
+
+        <!-- Header -->
+        <rect x="30" y="550" width="80" height="22" rx="2" fill="#1e293b" stroke="#334155" stroke-width="0.5"/>
+        <text x="70" y="564" fill="#94a3b8" font-size="8" text-anchor="middle">Complexity</text>
+        <rect x="115" y="550" width="55" height="22" rx="2" fill="#1e293b" stroke="#334155" stroke-width="0.5"/>
+        <text x="142" y="564" fill="#94a3b8" font-size="8" text-anchor="middle">Tier</text>
+        <rect x="175" y="550" width="60" height="22" rx="2" fill="#1e293b" stroke="#334155" stroke-width="0.5"/>
+        <text x="205" y="564" fill="#94a3b8" font-size="8" text-anchor="middle">Model</text>
+        <rect x="240" y="550" width="70" height="22" rx="2" fill="#1e293b" stroke="#334155" stroke-width="0.5"/>
+        <text x="275" y="564" fill="#94a3b8" font-size="8" text-anchor="middle">Benchmark</text>
+
+        <!-- Row 1 -->
+        <rect x="30" y="575" width="80" height="20" rx="2" fill="rgba(22, 101, 52, 0.2)"/>
+        <text x="70" y="589" fill="#86efac" font-size="8" text-anchor="middle">simple</text>
+        <rect x="115" y="575" width="55" height="20" rx="2" fill="rgba(22, 101, 52, 0.15)"/>
+        <text x="142" y="589" fill="#94a3b8" font-size="8" text-anchor="middle">fast</text>
+        <rect x="175" y="575" width="60" height="20" rx="2" fill="rgba(22, 101, 52, 0.1)"/>
+        <text x="205" y="589" fill="#94a3b8" font-size="7" text-anchor="middle">Liquid 1.2B</text>
+        <rect x="240" y="575" width="70" height="20" rx="2" fill="rgba(22, 101, 52, 0.1)"/>
+        <text x="275" y="589" fill="#94a3b8" font-size="7" text-anchor="middle">MMLU 35</text>
+
+        <!-- Row 2 -->
+        <rect x="30" y="598" width="80" height="20" rx="2" fill="rgba(146, 64, 14, 0.2)"/>
+        <text x="70" y="612" fill="#fcd34d" font-size="8" text-anchor="middle">medium</text>
+        <rect x="115" y="598" width="55" height="20" rx="2" fill="rgba(146, 64, 14, 0.15)"/>
+        <text x="142" y="612" fill="#94a3b8" font-size="8" text-anchor="middle">thinking</text>
+        <rect x="175" y="598" width="60" height="20" rx="2" fill="rgba(146, 64, 14, 0.1)"/>
+        <text x="205" y="612" fill="#94a3b8" font-size="7" text-anchor="middle">GPT-OSS-20b</text>
+        <rect x="240" y="598" width="70" height="20" rx="2" fill="rgba(146, 64, 14, 0.1)"/>
+        <text x="275" y="612" fill="#94a3b8" font-size="7" text-anchor="middle">MLU 68.5</text>
+
+        <!-- Row 3 -->
+        <rect x="30" y="621" width="80" height="20" rx="2" fill="rgba(88, 28, 135, 0.2)"/>
+        <text x="70" y="635" fill="#d8b4fe" font-size="8" text-anchor="middle">hard</text>
+        <rect x="115" y="621" width="55" height="20" rx="2" fill="rgba(88, 28, 135, 0.15)"/>
+        <text x="142" y="635" fill="#94a3b8" font-size="8" text-anchor="middle">deep</text>
+        <rect x="175" y="621" width="60" height="20" rx="2" fill="rgba(88, 28, 135, 0.1)"/>
+        <text x="205" y="635" fill="#94a3b8" font-size="7" text-anchor="middle">Llama 3.3 70B</text>
+        <rect x="240" y="621" width="70" height="20" rx="2" fill="rgba(88, 28, 135, 0.1)"/>
+        <text x="275" y="635" fill="#94a3b8" font-size="7" text-anchor="middle">SWE 49.2</text>
+
+        <!-- Row 4: low confidence -->
+        <rect x="30" y="644" width="80" height="20" rx="2" fill="rgba(136, 19, 55, 0.2)"/>
+        <text x="70" y="658" fill="#fda4af" font-size="7" text-anchor="middle">conf &lt; 0.4</text>
+        <rect x="115" y="644" width="55" height="20" rx="2" fill="rgba(136, 19, 55, 0.15)"/>
+        <text x="142" y="658" fill="#94a3b8" font-size="8" text-anchor="middle">bump +1</text>
+        <rect x="175" y="644" width="60" height="20" rx="2" fill="rgba(136, 19, 55, 0.1)"/>
+        <text x="205" y="658" fill="#94a3b8" font-size="7" text-anchor="middle">next tier</text>
+        <rect x="240" y="644" width="70" height="20" rx="2" fill="rgba(136, 19, 55, 0.1)"/>
+        <text x="275" y="658" fill="#fda4af" font-size="7" text-anchor="middle">auto</text>
+
+        <!-- Row 5: decomposition -->
+        <rect x="30" y="667" width="80" height="20" rx="2" fill="rgba(99, 102, 241, 0.2)"/>
+        <text x="70" y="681" fill="#c7d2fe" font-size="7" text-anchor="middle">multi-step</text>
+        <rect x="115" y="667" width="55" height="20" rx="2" fill="rgba(99, 102, 241, 0.15)"/>
+        <text x="142" y="681" fill="#94a3b8" font-size="8" text-anchor="middle">sub-task</text>
+        <rect x="175" y="667" width="60" height="20" rx="2" fill="rgba(99, 102, 241, 0.1)"/>
+        <text x="205" y="681" fill="#94a3b8" font-size="7" text-anchor="middle">per step</text>
+        <rect x="240" y="667" width="70" height="20" rx="2" fill="rgba(99, 102, 241, 0.1)"/>
+        <text x="275" y="681" fill="#94a3b8" font-size="7" text-anchor="middle">optimized</text>
+
+        <!-- Row 6: code task -->
+        <rect x="30" y="690" width="80" height="20" rx="2" fill="rgba(6, 78, 59, 0.2)"/>
+        <text x="70" y="704" fill="#6ee7b7" font-size="7" text-anchor="middle">code task</text>
+        <rect x="115" y="690" width="55" height="20" rx="2" fill="rgba(6, 78, 59, 0.15)"/>
+        <text x="142" y="704" fill="#94a3b8" font-size="8" text-anchor="middle">any tier</text>
+        <rect x="175" y="690" width="60" height="20" rx="2" fill="rgba(6, 78, 59, 0.1)"/>
+        <text x="205" y="704" fill="#94a3b8" font-size="7" text-anchor="middle">best coder</text>
+        <rect x="240" y="690" width="70" height="20" rx="2" fill="rgba(6, 78, 59, 0.1)"/>
+        <text x="275" y="704" fill="#6ee7b7" font-size="7" text-anchor="middle">SWE/HumanEval</text>
+
+        <!-- Legend key -->
+        <rect x="115" y="720" width="150" height="28" rx="4" fill="rgba(99, 102, 241, 0.15)" stroke="#818cf8" stroke-width="0.5"/>
+        <text x="190" y="738" fill="#c7d2fe" font-size="7" text-anchor="middle">↑ benchmark score biases model pick</text>
 
         <!-- ================================================================ -->
         <!-- LEGEND                                                           -->
         <!-- ================================================================ -->
 
-        <rect x="840" y="480" width="190" height="160" rx="8" fill="rgba(15, 23, 42, 0.6)" stroke="#334155" stroke-width="1"/>
-        <text x="850" y="498" fill="white" font-size="9" font-weight="600">Legend</text>
+        <rect x="940" y="420" width="150" height="200" rx="8" fill="rgba(15, 23, 42, 0.6)" stroke="#334155" stroke-width="1"/>
+        <text x="950" y="438" fill="white" font-size="9" font-weight="600">Legend</text>
 
-        <rect x="850" y="510" width="14" height="8" rx="2" fill="rgba(8, 51, 68, 0.4)" stroke="#22d3ee" stroke-width="1"/>
-        <text x="870" y="517" fill="#94a3b8" font-size="8">Classification</text>
+        <rect x="950" y="448" width="12" height="8" rx="2" fill="rgba(8, 51, 68, 0.4)" stroke="#22d3ee" stroke-width="1"/>
+        <text x="968" y="455" fill="#94a3b8" font-size="7">Classification</text>
 
-        <rect x="850" y="526" width="14" height="8" rx="2" fill="rgba(6, 78, 59, 0.4)" stroke="#34d399" stroke-width="1"/>
-        <text x="870" y="533" fill="#94a3b8" font-size="8">Routing</text>
+        <rect x="950" y="463" width="12" height="8" rx="2" fill="rgba(6, 78, 59, 0.4)" stroke="#34d399" stroke-width="1"/>
+        <text x="968" y="470" fill="#94a3b8" font-size="7">Routing</text>
 
-        <rect x="850" y="542" width="14" height="8" rx="2" fill="rgba(120, 53, 15, 0.3)" stroke="#fbbf24" stroke-width="1"/>
-        <text x="870" y="549" fill="#94a3b8" font-size="8">Execution</text>
+        <rect x="950" y="478" width="12" height="8" rx="2" fill="rgba(120, 53, 15, 0.3)" stroke="#fbbf24" stroke-width="1"/>
+        <text x="968" y="485" fill="#94a3b8" font-size="7">Execution</text>
 
-        <rect x="850" y="558" width="14" height="8" rx="2" fill="rgba(76, 29, 149, 0.4)" stroke="#a78bfa" stroke-width="1"/>
-        <text x="870" y="565" fill="#94a3b8" font-size="8">Output / Storage</text>
+        <rect x="950" y="493" width="12" height="8" rx="2" fill="rgba(76, 29, 149, 0.4)" stroke="#a78bfa" stroke-width="1"/>
+        <text x="968" y="500" fill="#94a3b8" font-size="7">Output</text>
 
-        <rect x="850" y="574" width="14" height="8" rx="2" fill="rgba(136, 19, 55, 0.4)" stroke="#fb7185" stroke-width="1"/>
-        <text x="870" y="581" fill="#94a3b8" font-size="8">Cascade / Auth</text>
+        <rect x="950" y="508" width="12" height="8" rx="2" fill="rgba(99, 102, 241, 0.35)" stroke="#818cf8" stroke-width="1"/>
+        <text x="968" y="515" fill="#94a3b8" font-size="7">Decomposition</text>
 
-        <line x1="850" y1="594" x2="864" y2="594" stroke="#94a3b8" stroke-width="1" stroke-dasharray="3,3"/>
-        <text x="870" y="597" fill="#94a3b8" font-size="8">Async / WS</text>
+        <rect x="950" y="523" width="12" height="8" rx="2" fill="rgba(136, 19, 55, 0.4)" stroke="#fb7185" stroke-width="1"/>
+        <text x="968" y="530" fill="#94a3b8" font-size="7">Cascade</text>
 
-        <rect x="850" y="606" width="14" height="8" rx="2" fill="rgba(30, 41, 59, 0.5)" stroke="#94a3b8" stroke-width="1" stroke-dasharray="3,3"/>
-        <text x="870" y="613" fill="#94a3b8" font-size="8">External</text>
+        <rect x="950" y="538" width="12" height="8" rx="2" fill="rgba(251, 146, 60, 0.2)" stroke="#fb923c" stroke-width="1" stroke-dasharray="2,2"/>
+        <text x="968" y="545" fill="#94a3b8" font-size="7">Launch Hook</text>
 
-        <rect x="850" y="622" width="14" height="8" rx="2" fill="rgba(22, 101, 52, 0.2)" stroke="#22c55e" stroke-width="1"/>
-        <text x="870" y="629" fill="#94a3b8" font-size="8">Fast Tier</text>
+        <line x1="950" y1="556" x2="962" y2="556" stroke="#94a3b8" stroke-width="1" stroke-dasharray="2,2"/>
+        <text x="968" y="559" fill="#94a3b8" font-size="7">Async / WS</text>
+
+        <rect x="950" y="568" width="12" height="8" rx="2" fill="rgba(30, 41, 59, 0.5)" stroke="#94a3b8" stroke-width="1" stroke-dasharray="2,2"/>
+        <text x="968" y="575" fill="#94a3b8" font-size="7">External</text>
+
+        <rect x="950" y="583" width="12" height="8" rx="2" fill="rgba(22, 101, 52, 0.2)" stroke="#22c55e" stroke-width="1"/>
+        <text x="968" y="590" fill="#94a3b8" font-size="7">Fast Tier</text>
+
+        <rect x="950" y="598" width="12" height="8" rx="2" fill="rgba(146, 64, 14, 0.2)" stroke="#f59e0b" stroke-width="1"/>
+        <text x="968" y="605" fill="#94a3b8" font-size="7">Thinking Tier</text>
+
+        <rect x="950" y="613" width="12" height="8" rx="2" fill="rgba(88, 28, 135, 0.2)" stroke="#a855f7" stroke-width="1"/>
+        <text x="968" y="620" fill="#94a3b8" font-size="7">Deep Tier</text>
 
       </svg>
     </div>
@@ -365,7 +452,7 @@
         </div>
         <ul>
           <li>• Complexity: simple / medium / hard</li>
-          <li>• Task: conversation, code, general</li>
+          <li>• Task: code, reasoning, general</li>
           <li>• Method: heuristic + optional embeddings</li>
           <li>• Fallback: keyword/regex when no embedder</li>
         </ul>
@@ -378,29 +465,43 @@
         </div>
         <ul>
           <li>• CostRouter maps complexity to tier</li>
+          <li>• Benchmark-aware: picks best model for task type</li>
           <li>• Confidence override: &lt;0.4 → bump tier</li>
-          <li>• Cascade: self-verify, escalate if unsure</li>
-          <li>• Max 1 hop, skip if confidence &gt;0.95</li>
+          <li>• Cascade: self-verify → escalate if unsure</li>
         </ul>
       </div>
 
       <div class="card">
         <div class="card-header">
-          <div class="card-dot violet"></div>
-          <h3>Model Pool — 27 Free Models</h3>
+          <div class="card-dot indigo"></div>
+          <h3>Task Decomposer</h3>
         </div>
         <ul>
-          <li>• Fast (3): Liquid 1.2B, Llama 3.2 3B</li>
-          <li>• Thinking (12): GPT-OSS-20b, Laguna XS, ...</li>
-          <li>• Deep (7): Llama 70B, GPT-OSS-120b, ...</li>
-          <li>• All free via OpenRouter API</li>
+          <li>• Splits multi-step queries into sub-tasks</li>
+          <li>• Each sub-task routed independently</li>
+          <li>• Cheap sub-tasks → fast model</li>
+          <li>• Hard sub-tasks → deep model</li>
+          <li>• Supports sequential, parallel, pipeline</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-dot orange"></div>
+          <h3>Launch Hook + Benchmarks</h3>
+        </div>
+        <ul>
+          <li>• Scrapes OpenRouter on startup</li>
+          <li>• Resolves SWE-bench, MMLU, HumanEval scores</li>
+          <li>• Fills BenchmarkProfile per model</li>
+          <li>• Feeds into CostRouter as support metric</li>
         </ul>
       </div>
     </div>
 
     <!-- Footer -->
     <p class="footer">
-      Model Router · Hackathon Project · 27 OpenRouter Free Models · $0 Inference Cost
+      Model Router · Hackathon Project · 27 OpenRouter Free Models · Benchmark-Aware · Task Decomposition
     </p>
   </div>
 </body>
