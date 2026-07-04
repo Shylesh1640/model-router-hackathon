@@ -7,6 +7,7 @@ from typing import Optional
 
 class Complexity:
     """Query complexity levels — determined by distance from source of truth."""
+    SIMPLE = "simple"      # alias for close (backwards compat)
     CLOSE = "close"        # distance < 0.3 → answer from source, fast model
     MODERATE = "moderate"  # distance 0.3-0.6 → web search, thinking model  
     DISTANT = "distant"    # distance > 0.6 → deep reasoning, deep model
@@ -31,6 +32,18 @@ class BenchmarkProfile:
     @property
     def overall_score(self) -> Optional[float]:
         scores = [s for s in [self.mmlu_pro, self.humaneval, self.swe_bench_verified] if s is not None]
+        return sum(scores) / len(scores) if scores else None
+
+    @property
+    def coding_score(self) -> Optional[float]:
+        """Aggregate coding benchmark score (HumanEval + SWE-bench + LiveCodeBench)."""
+        scores = [s for s in [self.humaneval, self.swe_bench_verified, self.livecodebench] if s is not None]
+        return sum(scores) / len(scores) if scores else None
+
+    @property
+    def reasoning_score(self) -> Optional[float]:
+        """Aggregate reasoning benchmark score (MMLU-Pro + SimpleQA)."""
+        scores = [s for s in [self.mmlu_pro, self.simpleqa] if s is not None]
         return sum(scores) / len(scores) if scores else None
 
 

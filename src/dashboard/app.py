@@ -11,7 +11,7 @@ from fastapi.staticfiles import StaticFiles
 
 from src.config import get_config
 from src.models import RouteRequest, RouteResponse
-from src.pipeline import RoutingPipeline
+from src.pipeline import ChatbotPipeline as RoutingPipeline
 from src.constants import ALL_MODELS, FAST_MODELS, THINKING_MODELS, DEEP_MODELS
 
 logger = logging.getLogger(__name__)
