@@ -3,6 +3,8 @@
 from dataclasses import dataclass, field
 from typing import Optional
 
+from src.models import BenchmarkProfile
+
 
 @dataclass
 class ModelInfo:
@@ -17,6 +19,7 @@ class ModelInfo:
     is_multimodal: bool = False
     specialties: list[str] = field(default_factory=list)
     description: str = ""
+    benchmarks: Optional[BenchmarkProfile] = None
 
 
 # =============================================================================
@@ -87,6 +90,9 @@ THINKING_MODELS = [
         is_moe=True,
         specialties=["reasoning", "tool-use"],
         description="OpenAI's open-weight 20B MoE (3.6B active). Strong reasoning + tool use.",
+        benchmarks=BenchmarkProfile(
+            mmlu_pro=68.5, humaneval=82.0, swe_bench_verified=38.2, source="manual",
+        ),
     ),
     ModelInfo(
         name="Poolside Laguna XS 2.1",
@@ -98,6 +104,9 @@ THINKING_MODELS = [
         is_moe=True,
         specialties=["coding"],
         description="Agentic coding MoE. Strong on multi-step code tasks.",
+        benchmarks=BenchmarkProfile(
+            swe_bench_verified=45.0, livecodebench=52.0, source="manual",
+        ),
     ),
     ModelInfo(
         name="Poolside Laguna XS.2",
@@ -109,6 +118,9 @@ THINKING_MODELS = [
         is_moe=True,
         specialties=["coding"],
         description="Updated Laguna XS. Apache 2.0. Agentic coding specialist.",
+        benchmarks=BenchmarkProfile(
+            swe_bench_verified=48.5, livecodebench=55.0, source="manual",
+        ),
     ),
     ModelInfo(
         name="Cohere North Mini Code",
@@ -120,6 +132,9 @@ THINKING_MODELS = [
         is_moe=True,
         specialties=["coding"],
         description="Cohere's agentic coding model. 30B total / 3B active. Apache 2.0.",
+        benchmarks=BenchmarkProfile(
+            swe_bench_verified=42.0, livecodebench=48.0, simpleqa=65.0, source="manual",
+        ),
     ),
     ModelInfo(
         name="Nemotron 3 Nano 30B A3B",
@@ -211,6 +226,9 @@ DEEP_MODELS = [
         total_params_b=70.0,
         context_length=131072,
         description="Proven frontier workhorse. Reliable 70B dense.",
+        benchmarks=BenchmarkProfile(
+            mmlu_pro=82.0, humaneval=85.0, swe_bench_verified=49.2, livecodebench=58.0, simpleqa=76.0, source="manual",
+        ),
     ),
     ModelInfo(
         name="GPT-OSS-120b",
@@ -222,6 +240,9 @@ DEEP_MODELS = [
         is_moe=True,
         specialties=["reasoning", "tool-use", "agentic"],
         description="OpenAI's open-weight 120B MoE (5.1B active). Strongest GPT-OSS reasoning.",
+        benchmarks=BenchmarkProfile(
+            mmlu_pro=85.0, humaneval=90.0, swe_bench_verified=52.0, livecodebench=62.0, simpleqa=78.0, source="manual",
+        ),
     ),
     ModelInfo(
         name="Poolside Laguna M.1",
@@ -233,6 +254,9 @@ DEEP_MODELS = [
         is_moe=True,
         specialties=["coding", "agentic"],
         description="SOTA agentic coding. 225B total / 23B active. Long-horizon.",
+        benchmarks=BenchmarkProfile(
+            swe_bench_verified=62.0, livecodebench=68.0, source="manual",
+        ),
     ),
     ModelInfo(
         name="Nemotron 3 Super 120B A12B",

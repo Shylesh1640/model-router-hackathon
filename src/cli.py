@@ -16,6 +16,10 @@ def main():
     parser.add_argument("query", nargs="?", help="Query to route (omit for interactive mode)")
     parser.add_argument("--tier", choices=["fast", "thinking", "deep"], help="Force a specific tier")
     parser.add_argument("--no-cascade", action="store_true", help="Disable cascade")
+    parser.add_argument("--decompose", action="store_true", help="Enable task decomposition")
+    parser.add_argument("--no-decompose", action="store_true", help="Disable task decomposition")
+    parser.add_argument("--benchmarks", action="store_true", help="Show benchmark scores in output")
+    parser.add_argument("--refresh-models", action="store_true", help="Force refresh model benchmarks from provider")
     parser.add_argument("--json", action="store_true", help="Output as JSON")
     parser.add_argument("--dashboard", action="store_true", help="Start dashboard server")
     parser.add_argument("--port", type=int, default=8080, help="Dashboard port")
@@ -35,31 +39,62 @@ def main():
     config = get_config()
     pipeline = RoutingPipeline(config)
 
+    # Force refresh models if requested
+    if args.refresh_models:
+        from src.scraper.provider import refresh_model_pool
+        count = refresh_model_pool(config.openrouter_api_key)
+        print(f"Model pool refreshed: {count} models")
+        return
+
+    # Determine decomposition mode
+    decompose = None
+    if args.decompose:
+        decompose = True
+    elif args.no_decompose:
+        decompose = False
+
     if args.query:
-        _route_single(pipeline, args.query, args.tier, not args.no_cascade, args.json)
+        _route_single(pipeline, args.query, args.tier, not args.no_cascade, decompose, args.benchmarks, args.json)
     else:
-        _interactive(pipeline, args.json)
+        _interactive(pipeline, args.benchmarks, args.json)
 
 
-def _route_single(pipeline, query, force_tier, cascade, json_output):
-    req = RouteRequest(query=query, force_tier=force_tier, cascade=cascade)
+def _route_single(pipeline, query, force_tier=None, cascade=True, decompose=None, show_benchmarks=False, json_output=False):
+    req = RouteRequest(query=query, force_tier=force_tier, cascade=cascade, decompose=decompose)
     result = pipeline.route(req)
 
     if json_output:
-        print(json.dumps({
+        out = {
             "query": result.query,
-            "response": result.response,
+            "response": result.response[:500],
             "complexity": result.classification.complexity,
             "task": result.classification.task_label,
             "confidence": result.classification.confidence,
             "tier": result.routing.tier,
             "model": result.routing.model_name,
             "model_id": result.routing.model_id,
+            "reason": result.routing.reason,
             "tokens": result.generation.tokens_in + result.generation.tokens_out,
             "latency_ms": result.generation.latency_ms,
             "escalated": result.generation.cascade_escalated,
             "error": result.generation.error,
-        }, indent=2))
+        }
+        if result.routing.benchmark_scores:
+            out["benchmarks"] = result.routing.benchmark_scores
+        if result.decomposition:
+            out["decomposition"] = {
+                "strategy": result.decomposition.strategy,
+                "sub_tasks": [
+                    {
+                        "id": s.id,
+                        "description": s.description,
+                        "complexity": s.complexity,
+                        "model": s.routing.model_name if s.routing else None,
+                        "tier": s.routing.tier if s.routing else None,
+                    }
+                    for s in result.decomposition.sub_tasks
+                ],
+            }
     else:
         tier_badge = {
             "fast": "\033[32mFAST\033[0m",
@@ -82,7 +117,7 @@ def _route_single(pipeline, query, force_tier, cascade, json_output):
         print(f"\n{result.response}\n")
 
 
-def _interactive(pipeline, json_output):
+def _interactive(pipeline, show_benchmarks=False, json_output=False):
     print("\033[36mModel Router — interactive mode. Type queries or /stats /models /quit\033[0m")
     while True:
         try:
