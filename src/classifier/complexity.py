@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 # Heuristic complexity signals
 _COMPLEXITY_SIGNALS = {
-    Complexity.SIMPLE: {
+    Complexity.CLOSE: {
         "keywords": {"hello", "hi", "hey", "thanks", "bye", "yes", "no", "good"},
         "max_words": 5,
         "patterns": [
@@ -19,7 +19,7 @@ _COMPLEXITY_SIGNALS = {
             r"^\w+\s*\??$",
         ],
     },
-    Complexity.MEDIUM: {
+    Complexity.MODERATE: {
         "keywords": {
             "explain", "describe", "compare", "difference", "why",
             "how does", "how to", "what is", "meaning", "purpose",
@@ -32,7 +32,7 @@ _COMPLEXITY_SIGNALS = {
             r"what\s+is\s+(a|an|the)\s+\w+",
         ],
     },
-    Complexity.HARD: {
+    Complexity.DISTANT: {
         "keywords": {
             "debug", "implement", "design", "create", "build",
             "optimize", "refactor", "architect", "generate",
@@ -103,13 +103,13 @@ class ComplexityClassifier:
 
             # Short queries cluster near origin in embedding space
             if norm < 5.0:
-                complexity = Complexity.SIMPLE
+                complexity = Complexity.CLOSE
                 confidence = 0.7 + min(norm / 10.0, 0.2)
             elif norm < 12.0:
-                complexity = Complexity.MEDIUM
+                complexity = Complexity.MODERATE
                 confidence = 0.6 + min((norm - 5.0) / 20.0, 0.3)
             else:
-                complexity = Complexity.HARD
+                complexity = Complexity.DISTANT
                 confidence = 0.6 + min(norm / 50.0, 0.3)
 
             task_label = self._infer_task(query, complexity)
@@ -135,7 +135,7 @@ class ComplexityClassifier:
             # Check patterns
             for pattern in signals["patterns"]:
                 if re.search(pattern, q_lower):
-                    confidence = 0.7 if complexity == Complexity.HARD else 0.6
+                    confidence = 0.7 if complexity == Complexity.DISTANT else 0.6
                     return ClassificationResult(
                         query=query, complexity=complexity,
                         task_label=self._infer_task(query, complexity),
@@ -158,7 +158,7 @@ class ComplexityClassifier:
 
         # Fallback: medium
         return ClassificationResult(
-            query=query, complexity=Complexity.MEDIUM,
+            query=query, complexity=Complexity.MODERATE,
             task_label="general", confidence=0.4,
             method="fallback",
         )
@@ -168,7 +168,7 @@ class ComplexityClassifier:
     ) -> ClassificationResult:
         """Weighted merge of embedding and heuristic results."""
         w_emb, w_heur = 0.6, 0.4
-        complexities = [Complexity.SIMPLE, Complexity.MEDIUM, Complexity.HARD]
+        complexities = [Complexity.CLOSE, Complexity.MODERATE, Complexity.DISTANT]
         emb_idx = complexities.index(emb.complexity)
         heur_idx = complexities.index(heur.complexity)
 

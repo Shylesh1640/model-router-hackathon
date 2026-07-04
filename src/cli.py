@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""CLI entry point for the Model Router."""
+"""CLI for the Source-of-Truth chatbot."""
 
 import argparse
 import json
@@ -7,140 +7,145 @@ import logging
 import sys
 
 from src.config import get_config
-from src.models import RouteRequest, Complexity
-from src.pipeline import RoutingPipeline
+from src.models import RouteRequest
+from src.pipeline import ChatbotPipeline
+from src.sot.source_of_truth import get_sot
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Model Router — Cost-optimized LLM routing")
-    parser.add_argument("query", nargs="?", help="Query to route (omit for interactive mode)")
-    parser.add_argument("--tier", choices=["fast", "thinking", "deep"], help="Force a specific tier")
-    parser.add_argument("--no-cascade", action="store_true", help="Disable cascade")
-    parser.add_argument("--decompose", action="store_true", help="Enable task decomposition")
-    parser.add_argument("--no-decompose", action="store_true", help="Disable task decomposition")
-    parser.add_argument("--benchmarks", action="store_true", help="Show benchmark scores in output")
-    parser.add_argument("--refresh-models", action="store_true", help="Force refresh model benchmarks from provider")
-    parser.add_argument("--json", action="store_true", help="Output as JSON")
-    parser.add_argument("--dashboard", action="store_true", help="Start dashboard server")
-    parser.add_argument("--port", type=int, default=8080, help="Dashboard port")
-    parser.add_argument("--verbose", "-v", action="store_true", help="Verbose logging")
+    parser = argparse.ArgumentParser(description="Source-of-Truth Chatbot")
+    parser.add_argument("query", nargs="?", help="Query (omit for interactive mode)")
+    parser.add_argument("--domain", default="this knowledge base", help="Domain name for rebukes")
+    parser.add_argument("--seed", help="Seed source of truth from a text file")
+    parser.add_argument("--add", help="Add a document to source of truth")
+    parser.add_argument("--list-sources", action="store_true", help="List source document count")
+    parser.add_argument("--clear", action="store_true", help="Clear all source documents")
+    parser.add_argument("--json", action="store_true", help="JSON output")
+    parser.add_argument("--verbose", "-v", action="store_true", help="Verbose")
+    parser.add_argument("--dashboard", action="store_true", help="Start dashboard")
     args = parser.parse_args()
 
     logging.basicConfig(
-        level=logging.DEBUG if args.verbose else logging.INFO,
+        level=logging.DEBUG if args.verbose else logging.WARNING,
         format="%(asctime)s | %(name)s | %(levelname)s | %(message)s",
     )
 
-    if args.dashboard:
-        from src.dashboard.app import run_dashboard
-        run_dashboard()
-        return
-
     config = get_config()
-    pipeline = RoutingPipeline(config)
+    sot = get_sot()
+    pipeline = ChatbotPipeline(config, domain=args.domain)
 
-    # Force refresh models if requested
-    if args.refresh_models:
-        from src.scraper.provider import refresh_model_pool
-        count = refresh_model_pool(config.openrouter_api_key)
-        print(f"Model pool refreshed: {count} models")
+    # Handle source management commands
+    if args.seed:
+        with open(args.seed) as f:
+            content = f.read()
+        lines = [l.strip() for l in content.split("\n") if l.strip()]
+        ids = sot.add_documents([{"content": l, "source": args.seed} for l in lines])
+        print(f"Seeded {len(ids)} documents from {args.seed}")
         return
 
-    # Determine decomposition mode
-    decompose = None
-    if args.decompose:
-        decompose = True
-    elif args.no_decompose:
-        decompose = False
+    if args.add:
+        doc_id = sot.add_document(args.add, source="cli")
+        print(f"Added document: {doc_id}")
+        print(f"Total sources: {sot.count()}")
+        return
 
+    if args.list_sources:
+        print(f"Source of Truth: {sot.count()} documents")
+        return
+
+    if args.clear:
+        sot.clear()
+        print("Source of Truth cleared.")
+        return
+
+    if args.dashboard:
+        print("Dashboard: python -m src.dashboard.app")
+        return
+
+    # Interactive or single query
     if args.query:
-        _route_single(pipeline, args.query, args.tier, not args.no_cascade, decompose, args.benchmarks, args.json)
+        _route(pipeline, args.query, args.json)
     else:
-        _interactive(pipeline, args.benchmarks, args.json)
+        _interactive(pipeline, args.json)
 
 
-def _route_single(pipeline, query, force_tier=None, cascade=True, decompose=None, show_benchmarks=False, json_output=False):
-    req = RouteRequest(query=query, force_tier=force_tier, cascade=cascade, decompose=decompose)
+def _route(pipeline, query, json_output=False):
+    req = RouteRequest(query=query)
     result = pipeline.route(req)
 
     if json_output:
         out = {
             "query": result.query,
-            "response": result.response[:500],
+            "response": result.response,
             "complexity": result.classification.complexity,
             "task": result.classification.task_label,
+            "source_distance": round(result.classification.source_distance, 3),
             "confidence": result.classification.confidence,
             "tier": result.routing.tier,
             "model": result.routing.model_name,
-            "model_id": result.routing.model_id,
-            "reason": result.routing.reason,
-            "tokens": result.generation.tokens_in + result.generation.tokens_out,
-            "latency_ms": result.generation.latency_ms,
-            "escalated": result.generation.cascade_escalated,
-            "error": result.generation.error,
+            "rebuked": result.rebuked,
+            "web_search": result.generation.web_search_used,
+            "deep_reasoning": result.generation.deep_reasoning_used,
         }
-        if result.routing.benchmark_scores:
-            out["benchmarks"] = result.routing.benchmark_scores
-        if result.decomposition:
-            out["decomposition"] = {
-                "strategy": result.decomposition.strategy,
-                "sub_tasks": [
-                    {
-                        "id": s.id,
-                        "description": s.description,
-                        "complexity": s.complexity,
-                        "model": s.routing.model_name if s.routing else None,
-                        "tier": s.routing.tier if s.routing else None,
-                    }
-                    for s in result.decomposition.sub_tasks
-                ],
-            }
+        print(json.dumps(out, indent=2))
     else:
+        dist = result.classification.source_distance
         tier_badge = {
-            "fast": "\033[32mFAST\033[0m",
-            "thinking": "\033[33mTHINK\033[0m",
-            "deep": "\033[35mDEEP\033[0m",
+            "grounded": "\033[32mGROUNDED\033[0m",
+            "web_search": "\033[33mWEB+SEARCH\033[0m",
+            "deep_reasoning": "\033[35mDEEP\033[0m",
+            "rebuked": "\033[31mREBUKED\033[0m",
+            "blocked": "\033[31mBLOCKED\033[0m",
         }.get(result.routing.tier, result.routing.tier)
 
         print(f"\n{'='*60}")
-        print(f"  {tier_badge}  {result.routing.model_name}")
-        print(f"  Complexity: {result.classification.complexity}  |  "
-              f"Confidence: {result.classification.confidence:.2f}")
-        print(f"  Reason: {result.routing.reason}")
-        if result.generation.cascade_escalated:
-            print(f"  \033[33m↗ Escalated: {result.generation.cascade_from_tier} → {result.generation.cascade_to_tier}\033[0m")
-        print(f"  Tokens: {result.generation.tokens_in + result.generation.tokens_out}  |  "
-              f"Latency: {result.generation.latency_ms}ms")
-        if result.generation.error:
-            print(f"  \033[31mError: {result.generation.error}\033[0m")
+        print(f"  {tier_badge}  distance={dist:.3f}  "
+              f"confidence={result.classification.confidence:.2f}")
+        print(f"  model={result.routing.model_name}  |  tier={result.routing.tier}")
+        if result.rebuked:
+            print(f"  \033[33m⛔ {result.safety.reason}\033[0m")
+        if result.generation.web_search_used:
+            print(f"  \033[36m🌐 Web search consulted\033[0m")
+        if result.generation.deep_reasoning_used:
+            print(f"  \033[35m🧠 Deep reasoning chain\033[0m")
         print(f"{'='*60}")
         print(f"\n{result.response}\n")
 
 
-def _interactive(pipeline, show_benchmarks=False, json_output=False):
-    print("\033[36mModel Router — interactive mode. Type queries or /stats /models /quit\033[0m")
+def _interactive(pipeline, json_output=False):
+    sot = get_sot()
+    print(f"\033[36mSource-of-Truth Chatbot\033[0m")
+    print(f"  \033[33m{sot.count()} documents in source of truth\033[0m")
+    print(f"  Commands: /add <text>  /seed <file>  /count  /quit\n")
+
     while True:
         try:
-            query = input("\n\033[36mroute>\033[0m ").strip()
+            query = input("\033[36mchat>\033[0m ").strip()
         except (EOFError, KeyboardInterrupt):
             break
         if not query:
             continue
         if query == "/quit":
             break
-        if query == "/stats":
-            stats = pipeline.get_stats()
-            print(json.dumps(stats, indent=2))
+        if query.startswith("/add "):
+            text = query[5:]
+            sot.add_document(text, source="interactive")
+            print(f"  \033[32mAdded. Total: {sot.count()}\033[0m")
             continue
-        if query == "/models":
-            from src.constants import FAST_MODELS, THINKING_MODELS, DEEP_MODELS
-            for tier, models in [("fast", FAST_MODELS), ("thinking", THINKING_MODELS), ("deep", DEEP_MODELS)]:
-                print(f"\n\033[3{'2' if tier == 'fast' else '3' if tier == 'thinking' else '5'}m{tier.upper()}\033[0m")
-                for m in models:
-                    print(f"  {m.name:40s} {m.openrouter_id}")
-            print()
+        if query == "/count":
+            print(f"  \033[33m{sot.count()} documents\033[0m")
             continue
-        _route_single(pipeline, query, None, True, json_output)
+        if query.startswith("/seed "):
+            path = query[6:]
+            try:
+                with open(path) as f:
+                    lines = [l.strip() for l in f.readlines() if l.strip()]
+                ids = sot.add_documents([{"content": l, "source": path} for l in lines])
+                print(f"  \033[32mSeeded {len(ids)} from {path}\033[0m")
+            except Exception as e:
+                print(f"  \033[31mError: {e}\033[0m")
+            continue
+        _route(pipeline, query, json_output)
 
 
 if __name__ == "__main__":

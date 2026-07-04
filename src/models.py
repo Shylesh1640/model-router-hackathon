@@ -1,69 +1,78 @@
-"""Shared data models for the routing pipeline."""
+"""Shared data models for the Source-of-Truth chatbot."""
 
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Optional, Union
+from typing import Optional
 
 
 class Complexity:
-    """Query complexity levels."""
-    SIMPLE = "simple"
-    MEDIUM = "medium"
-    HARD = "hard"
+    """Query complexity levels — determined by distance from source of truth."""
+    CLOSE = "close"        # distance < 0.3 → answer from source, fast model
+    MODERATE = "moderate"  # distance 0.3-0.6 → web search, thinking model  
+    DISTANT = "distant"    # distance > 0.6 → deep reasoning, deep model
 
-    CHOICES = [SIMPLE, MEDIUM, HARD]
+    CHOICES = [CLOSE, MODERATE, DISTANT]
 
 
 # =============================================================================
-# BENCHMARK PROFILES
+# BENCHMARK PROFILES (simplified — primary metric is SOT distance now)
 # =============================================================================
 
 @dataclass
 class BenchmarkProfile:
-    """Benchmark scores used as routing support metrics.
-
-    Scores are 0-100 (percentage) unless noted.
-    None = unknown, system will look up on provider scrape.
-    """
-    swe_bench_verified: Optional[float] = None   # SWE-bench Verified (%)
-    mmlu_pro: Optional[float] = None              # MMLU-Pro (%)
-    humaneval: Optional[float] = None             # HumanEval pass@1 (%)
-    livecodebench: Optional[float] = None         # LiveCodeBench (%)
-    simpleqa: Optional[float] = None              # SimpleQA accuracy (%)
-    source: str = "manual"                        # "manual" | "scraped" | "inferred"
-
-    @property
-    def coding_score(self) -> Optional[float]:
-        """Aggregate coding benchmark score."""
-        scores = [s for s in [self.humaneval, self.livecodebench, self.swe_bench_verified] if s is not None]
-        return sum(scores) / len(scores) if scores else None
-
-    @property
-    def reasoning_score(self) -> Optional[float]:
-        """Aggregate reasoning benchmark score."""
-        scores = [s for s in [self.mmlu_pro] if s is not None]
-        return sum(scores) / len(scores) if scores else None
+    """Benchmark scores used as routing support metrics."""
+    swe_bench_verified: Optional[float] = None
+    mmlu_pro: Optional[float] = None
+    humaneval: Optional[float] = None
+    livecodebench: Optional[float] = None
+    simpleqa: Optional[float] = None
+    source: str = "manual"
 
     @property
     def overall_score(self) -> Optional[float]:
-        """Weighted overall capability score."""
-        w_coding = 0.4
-        w_reasoning = 0.4
-        w_factual = 0.2
-        components = []
-        weights = []
-        if self.coding_score is not None:
-            components.append(self.coding_score)
-            weights.append(w_coding)
-        if self.reasoning_score is not None:
-            components.append(self.reasoning_score)
-            weights.append(w_reasoning)
-        if self.simpleqa is not None:
-            components.append(self.simpleqa)
-            weights.append(w_factual)
-        if not components:
-            return None
-        return sum(c * w for c, w in zip(components, weights)) / sum(weights)
+        scores = [s for s in [self.mmlu_pro, self.humaneval, self.swe_bench_verified] if s is not None]
+        return sum(scores) / len(scores) if scores else None
+
+
+# =============================================================================
+# SOURCE OF TRUTH
+# =============================================================================
+
+@dataclass
+class SourceDocument:
+    """A single document in the source of truth."""
+    id: str
+    content: str
+    embedding: Optional[list[float]] = None
+    metadata: dict = field(default_factory=dict)
+    source: str = ""  # e.g. "manual", "upload", "web"
+
+
+@dataclass
+class SourceQueryResult:
+    """Result of querying the source of truth."""
+    query: str
+    query_embedding: Optional[list[float]] = None
+    matches: list[SourceDocument] = field(default_factory=list)
+    distances: list[float] = field(default_factory=list)
+    min_distance: float = 1.0  # nearest doc distance (1 = no match)
+    is_off_topic: bool = False
+    off_topic_reason: str = ""
+    total_docs: int = 0
+
+
+# =============================================================================
+# SAFETY
+# =============================================================================
+
+@dataclass
+class SafetyResult:
+    """Result of safety check on a query."""
+    safe: bool = True
+    flagged: bool = False
+    category: str = ""  # "harmful", "off_topic", "safe"
+    reason: str = ""
+    rebuke_message: str = ""
 
 
 # =============================================================================
@@ -74,10 +83,11 @@ class BenchmarkProfile:
 class ClassificationResult:
     """Output from the classifier stage."""
     query: str
-    complexity: str  # simple | medium | hard
-    task_label: str  # conversation | code | reasoning | etc
+    complexity: str  # close | moderate | distant
+    task_label: str  # grounded | web_search | deep_reasoning | off_topic
     confidence: float  # 0-1
-    method: str  # "embedding" | "heuristic" | "hybrid" | "fallback"
+    method: str  # "sot_distance" | "heuristic" | "hybrid"
+    source_distance: float = 1.0  # distance from source of truth
     metadata: dict = field(default_factory=dict)
 
 
@@ -87,17 +97,17 @@ class ClassificationResult:
 
 @dataclass
 class RoutingDecision:
-    """Output from the router — which model to use and why."""
+    """Output from the router."""
     query: str
-    tier: str  # fast | thinking | deep
+    tier: str  # grounded | web_search | deep_reasoning
     model_id: str
     model_name: str
     complexity: str
     confidence: float
     reason: str
     cost_estimate_tokens: int = 0
-    override_applied: bool = False
-    benchmark_scores: Optional[dict] = None  # benchmark data used in decision
+    source_citations: list[str] = field(default_factory=list)
+    benchmark_scores: Optional[dict] = None
 
 
 # =============================================================================
@@ -117,12 +127,16 @@ class GenerationResult:
     cascade_escalated: bool = False
     cascade_from_tier: Optional[str] = None
     cascade_to_tier: Optional[str] = None
+    web_search_used: bool = False
+    web_search_results: list[dict] = field(default_factory=list)
+    deep_reasoning_used: bool = False
+    reasoning_chain: list[str] = field(default_factory=list)
+    source_docs_used: list[str] = field(default_factory=list)
     error: Optional[str] = None
     timestamp: datetime = field(default_factory=datetime.now)
 
     @property
     def cost(self) -> float:
-        """Estimated cost — 0 since all models are free."""
         return 0.0
 
 
@@ -132,12 +146,11 @@ class GenerationResult:
 
 @dataclass
 class SubTask:
-    """A single sub-task within a decomposed query."""
-    id: str  # e.g. "subtask-1"
-    description: str  # what this sub-task does
-    depends_on: list[str] = field(default_factory=list)  # sub-task IDs that must complete first
-    complexity: str = Complexity.MEDIUM
-    task_type: str = "general"  # code | search | reasoning | write | etc
+    id: str
+    description: str
+    depends_on: list[str] = field(default_factory=list)
+    complexity: str = Complexity.MODERATE
+    task_type: str = "general"
     result: Optional[str] = None
     routing: Optional[RoutingDecision] = None
     generation: Optional[GenerationResult] = None
@@ -145,10 +158,9 @@ class SubTask:
 
 @dataclass
 class DecompositionPlan:
-    """Plan for decomposing a complex query into sub-tasks."""
     original_query: str
     sub_tasks: list[SubTask] = field(default_factory=list)
-    strategy: str = "sequential"  # sequential | parallel | dependent
+    strategy: str = "sequential"
     reasoning: str = ""
 
 
@@ -158,20 +170,21 @@ class DecompositionPlan:
 
 @dataclass
 class RouteRequest:
-    """Incoming API request."""
     query: str
-    force_tier: Optional[str] = None  # override routing
-    cascade: Optional[bool] = None    # override cascade setting
-    decompose: Optional[bool] = None  # enable task decomposition
+    force_tier: Optional[str] = None
+    cascade: Optional[bool] = None
+    decompose: Optional[bool] = None
 
 
 @dataclass
 class RouteResponse:
-    """Full response from the routing API."""
     query: str
     response: str
     classification: ClassificationResult
     routing: RoutingDecision
     generation: GenerationResult
-    decomposition: Optional[DecompositionPlan] = None  # populated if decomposed
+    safety: Optional[SafetyResult] = None
+    source_query: Optional[SourceQueryResult] = None
+    decomposition: Optional[DecompositionPlan] = None
+    rebuked: bool = False
     dashboard_url: str = ""

@@ -73,7 +73,7 @@ class CostRouter:
 
         # Step 3: Pick model — benchmark-aware if resolver available
         bench_scores = None
-        if classification.complexity == Complexity.HARD:
+        if classification.complexity == Complexity.DISTANT or classification.complexity == "distant":
             model = self._pick_best_in_tier(tier, task_type, classification.task_label)
         else:
             model = self._pick_model(tier, task_type)
@@ -98,7 +98,6 @@ class CostRouter:
             confidence=classification.confidence,
             reason=" | ".join(reasons),
             cost_estimate_tokens=cost_estimate,
-            override_applied=override_applied,
             benchmark_scores=bench_scores,
         )
 
@@ -108,9 +107,12 @@ class CostRouter:
 
     def _complexity_to_tier(self, complexity: str) -> str:
         mapping = {
-            Complexity.SIMPLE: "fast",
-            Complexity.MEDIUM: "thinking",
-            Complexity.HARD: "deep",
+            Complexity.CLOSE: "fast",
+            Complexity.MODERATE: "thinking",
+            Complexity.DISTANT: "deep",
+            "close": "fast",
+            "moderate": "thinking",
+            "distant": "deep",
         }
         return mapping.get(complexity, "thinking")
 
@@ -192,8 +194,8 @@ class CostRouter:
         b = model.benchmarks
         return {
             "overall": round(b.overall_score, 1) if b.overall_score else None,
-            "coding": round(b.coding_score, 1) if b.coding_score else None,
-            "reasoning": round(b.reasoning_score, 1) if b.reasoning_score else None,
+            "coding": b.humaneval,
+            "reasoning": b.mmlu_pro,
             "swe_bench": b.swe_bench_verified,
             "mmlu_pro": b.mmlu_pro,
             "humaneval": b.humaneval,
