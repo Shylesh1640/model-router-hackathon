@@ -1,0 +1,42 @@
+[
+  {
+    "question": "what is python",
+    "answer": "Python is a high-level programming language."
+  },
+  {
+    "question": "how to sort a list in python",
+    "answer": "Use list.sort() or sorted()."
+  },
+  {
+    "question": "what is machine learning",
+    "answer": "ML is a subset of AI."
+  },
+  {
+    "question": "what is an API",
+    "answer": "API stands for Application Programming Interface."
+  },
+  {
+    "question": "how does http work",
+    "answer": "HTTP is a request-response protocol."
+  },
+  {
+    "question": "what is docker",
+    "answer": "Docker is a containerization platform."
+  },
+  {
+    "question": "what is kubernetes",
+    "answer": "K8s is an orchestration platform."
+  },
+  {
+    "question": "how to write a file in python",
+    "answer": "Use open() with 'w' mode."
+  },
+  {
+    "question": "what is git",
+    "answer": "Git is a version control system."
+  },
+  {
+    "question": "what is a database",
+    "answer": "A database stores structured data."
+  }
+]
