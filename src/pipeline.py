@@ -9,17 +9,27 @@ from src.models import (
     RouteRequest, RouteResponse, ClassificationResult,
     RoutingDecision, GenerationResult, SafetyResult, SourceQueryResult,
 )
-from src.classifier.complexity import ComplexityClassifier
 from src.router.engine import CostRouter
-from src.router.cascade import Cascade
 from src.router.client import OpenRouterClient
 from src.sot.source_of_truth import SourceOfTruth, get_sot
 from src.sot.safety import SafetyGuard, get_safety
 from src.search.web_search import WebSearcher, get_searcher
-from src.reasoning.deep_reasoning import DeepReasoner, get_reasoner
 from src.constants import DEFAULT_MODEL_PER_TIER
 
 logger = logging.getLogger(__name__)
+
+
+def _deep_reasoning_steps(query: str, source_context: str, search_results: list[dict]) -> list[dict]:
+    """Generate reasoning steps for deep tier queries."""
+    steps = [
+        {"step": 1, "type": "understand", "thought": f"Understanding the query: {query}", "source_check": bool(source_context)},
+        {"step": 2, "type": "contextualize", "thought": "Relating to the source of truth", "source_relevant": bool(source_context)},
+    ]
+    search_text = " ".join(r.get("snippet", "") for r in search_results[:3]) if search_results else ""
+    if search_text:
+        steps.append({"step": 3, "type": "search_integrate", "thought": f"Integrating web search findings: {search_text[:100]}...", "source": "web"})
+    steps.append({"step": len(steps) + 1, "type": "synthesize", "thought": "Synthesizing answer from source + search + reasoning"})
+    return steps
 
 
 class ChatbotPipeline:
@@ -32,9 +42,7 @@ class ChatbotPipeline:
         # Core modules
         self.sot: SourceOfTruth = get_sot()
         self.safety: SafetyGuard = get_safety(domain=domain)
-        self.classifier = ComplexityClassifier(method="hybrid")
-        self.router = CostRouter(confidence_override_threshold=0.4)
-        self.cascade = Cascade(self.config)
+        self.router = CostRouter()
         self.client = OpenRouterClient(
             api_key=self.config.openrouter_api_key,
             timeout=self.config.request_timeout_seconds,
@@ -43,7 +51,6 @@ class ChatbotPipeline:
         self.searcher: WebSearcher = get_searcher(
             search_url="http://localhost:8080",
         )
-        self.reasoner: DeepReasoner = get_reasoner()
 
         # State
         self.history: list[RouteResponse] = []
@@ -155,7 +162,6 @@ class ChatbotPipeline:
         # =====================================================================
         source_context = self._build_source_context(source_result)
         search_results = []
-        reasoning_chain = []
 
         if task_label == "web_search":
             logger.info(f"Query needs web search (distance={distance:.2f})")
@@ -169,19 +175,18 @@ class ChatbotPipeline:
         elif task_label == "deep_reasoning":
             logger.info(f"Query needs deep reasoning (distance={distance:.2f})")
             search_results = self.searcher.search(request.query)
-            reasoning = self.reasoner.reason(request.query, source_context, search_results)
-            reasoning_chain = reasoning.get("steps", [])
+            steps = _deep_reasoning_steps(request.query, source_context, search_results)
             search_context = self.searcher.format_for_prompt(search_results)
             prompt = self._build_prompt(
                 request.query, source_context,
                 search_context=search_context,
-                reasoning_steps=reasoning.get("steps", []),
+                reasoning_steps=steps,
             )
             generation = self.client.generate(prompt, routing.model_id, routing.tier)
             generation.web_search_used = bool(search_results)
             generation.web_search_results = search_results
             generation.deep_reasoning_used = True
-            generation.reasoning_chain = [s.get("thought", "") for s in reasoning_chain]
+            generation.reasoning_chain = [s.get("thought", "") for s in steps]
             generation.tier = "deep_reasoning"
 
         else:
@@ -271,9 +276,7 @@ class ChatbotPipeline:
     ) -> GenerationResult:
         if generation.error or not self.config.cascade_enabled:
             return generation
-        if not self.cascade.should_escalate(
-            request.query, generation.response, routing.tier, classification.confidence
-        ):
+        if classification.confidence > 0.7 or routing.tier == "deep":
             return generation
         next_tier = self._next_tier(routing.tier)
         if next_tier:
