@@ -1,121 +1,84 @@
 # Model Router — Project Plan
 
 ## Concept
-A **Source-of-Truth chatbot** where every answer is grounded in a knowledge base.
-Query difficulty = embedding distance from nearest source document.
+A **cost-optimized LLM routing library** — classify query complexity by distance from a source of truth, then select the cheapest capable model from OpenRouter's free pool.
 
 ## Core Architecture
 
 ```
-Query → Safety → SOT Lookup → Distance → Route → Generate
+Query → SOT Lookup → Distance → Classify → Route → Generate → [Cascade]
 ```
 
 ### Pipeline Stages
 
 | Stage | Module | What it does |
 |-------|--------|-------------|
-| Safety | `src/sot/safety.py` | Blocks harmful, rebukes off-topic |
-| SOT | `src/sot/source_of_truth.py` | Vector KB, n-gram embeddings, cosine distance |
-| Classify | — | d<0.30 close, d 0.3-0.6 moderate, d>0.6 distant |
-| Route | `src/router/engine.py` | Maps complexity to model tier |
-| Generate | `src/router/client.py` | OpenRouter API call with context |
-| Cascade | `src/router/cascade.py` | Self-verify, escalate if needed |
-| Web Search | `src/search/web_search.py` | SearXNG for external info |
-| Deep Reason | `src/reasoning/deep_reasoning.py` | Multi-step CoT for complex queries |
+| SOT | `store.py` | Dice-coefficient content-word store, zero deps |
+| Classify | `classify.py` | d<0.30 close, d 0.3-0.6 moderate, d>0.6 distant |
+| Route | `router.py` | Maps complexity to cheapest capable model tier |
+| Generate | `client.py` | OpenRouter API call with context + retries |
+| Cascade | `pipeline.py` | Low-confidence? Retry with next tier up |
+| Web Search | `search.py` | SearXNG for queries beyond SOT coverage |
 
 ### Routing Matrix
 
-| SOT Distance | Complexity | Tier | Model | Action |
-|-------------|-----------|------|-------|--------|
-| < 0.30 | close | grounded | Liquid 1.2B | Answer from source |
-| 0.30–0.60 | moderate | web_search | GPT-OSS-20b | Source + web search |
-| > 0.60 | distant | deep_reasoning | Llama 3.3 70B | Full reasoning chain |
+| SOT Distance | Complexity | Tier | Model | Strategy |
+|-------------|-----------|------|-------|----------|
+| < 0.30 | close | fast | Liquid 1.2B / Llama 3.2 3B | Answer from source |
+| 0.30–0.60 | moderate | thinking | GPT-OSS-20b / Laguna XS | Source + web search |
+| > 0.60 | distant | deep | Llama 3.3 70B / Qwen3 Coder | Full reasoning chain |
 
-## Data Pipeline
+### NOT included (by design)
 
-### Sources
+This is a library, not a chatbot. No:
+- CLI chat interface or interactive mode
+- Safety guard (no harmful-content filtering, no off-topic rebukes)
+- Domain-specific system prompts
+- Conversation management or persona system
+
+Those belong in the calling application.
+
+## Package Structure
+
+```
+src/model_router/
+├── __init__.py       # Public API — exports all key classes
+├── _version.py       # 0.2.0
+├── config.py         # RouterConfig — env-based, no hardcoded values
+├── models.py         # Data models — RouteRequest/Response, ClassificationResult, etc.
+├── constants.py      # Model pool — 25+ OpenRouter free models with benchmarks
+├── router.py         # CostRouter — cheapest capable model selection
+├── client.py         # OpenRouterClient — API client with retries
+├── store.py          # SourceOfTruth — Dice-coefficient document store
+├── classify.py       # DistanceClassifier — complexity from SOT distance
+├── search.py         # WebSearcher — SearXNG integration
+└── pipeline.py       # RoutingPipeline — classify → route → generate
+```
+
+## Tests
+
+25 tests across 4 test files, covering:
+- Router tier selection and fallback
+- Source of Truth CRUD and similarity
+- Distance classifier boundaries
+- Pipeline integration (without API key)
+
+## Data Sources
 
 1. **Alexa QA Dataset** (HuggingFace: `theblackcat102/alexa-qa`)
-   - 136K question-answer pairs
-   - Split: 70% train, 10% validation, 20% test
-   - Used for: training the embedding model + seeding SOT
-
-2. **Alexa Top 1M Domains** (portions)
-   - Domain list from S3/Kaggle/Majestic
-   - Scrape top N domains for content
-   - Used for: wide-coverage source of truth seeding
-
-### Processing Pipeline
-
-```
-Raw data → Clean → Embed → Store in SOT → Train embedder
-```
-
-### Training
-
-- Fine-tune `all-MiniLM-L6-v2` on Alexa QA pairs
-- Contrastive loss: similar Qs close, different Qs far
-- Export to ONNX for fast CPU inference
-- Fallback: character n-gram hashing (already working)
-
-## Implementation Order
-
-### Phase 1: Data Pipeline (current)
-- [ ] Scrape Alexa QA dataset from HuggingFace
-- [ ] Scrape Top 1M domain list
-- [ ] Scrape content from top domains (first 10K)
-- [ ] Clean and deduplicate
-- [ ] Store in SOT
-
-### Phase 2: Embedding Training
-- [ ] Fine-tune MiniLM on QA pairs
-- [ ] Evaluate distance accuracy
-- [ ] Export optimized model
-- [ ] Wire into Source of Truth
-
-### Phase 3: Production Hardening
-- [ ] Dashboard updates
-- [ ] Rate limiting
-- [ ] Caching
-- [ ] Monitoring
-
-## File Structure
-
-```
-src/
-├── sot/
-│   ├── source_of_truth.py   # Vector KB
-│   └── safety.py            # Safety guard
-├── data/
-│   ├── scraper.py           # Scrape domains + HF datasets
-│   ├── dataset.py           # Dataset management
-│   └── clean.py             # Text cleaning
-├── train/
-│   ├── embedder.py          # Fine-tune embedding model
-│   └── evaluate.py          # Evaluate distance accuracy
-├── router/
-│   ├── engine.py            # CostRouter
-│   ├── cascade.py           # Self-verify cascade
-│   └── client.py            # OpenRouter API
-├── search/
-│   └── web_search.py        # SearXNG
-├── reasoning/
-│   └── deep_reasoning.py    # CoT chain
-├── pipeline.py              # Main orchestrator
-├── cli.py                   # CLI entry point
-└── config.py                # Env configuration
-```
+   - 136K question-answer pairs — can seed the SOT for domain-specific routing
+2. **Alexa Top 1M Domains** (portions) — optional web content for SOT seeding
 
 ## Milestones
 
-| # | Milestone | Done |
-|---|-----------|------|
-| 1 | Core pipeline: safety → SOT → route → generate | ✅ |
+| # | Milestone | Status |
+|---|-----------|--------|
+| 1 | Core pipeline: classify → route → generate | ✅ |
 | 2 | Web search + deep reasoning tiers | ✅ |
 | 3 | Distance-based difficulty classification | ✅ |
-| 4 | Drawio architecture diagram | ✅ |
-| 5 | Alexa QA + domain scraper |  |
-| 6 | Embedding model training |  |
-| 7 | Accurate distance metrics |  |
-| 8 | Dashboard with SOT analytics |  |
-| 9 | Deployable demo |  |
+| 4 | Installable package (pyproject.toml, PEP 621) | ✅ |
+| 5 | Dashboard (FastAPI + WebSocket) | ✅ |
+| 6 | 25 passing tests | ✅ |
+| 7 | Removed all chatbot/safety/domain cruft | ✅ |
+| 8 | Embedding model training pipeline | |
+| 9 | Deployable demo | |

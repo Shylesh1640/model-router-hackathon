@@ -1,9 +1,9 @@
 # Pipeline Specification
 
 ## Overview
-Orchestrates the full query flow: Safety → SOT → Distance → Route → Generate → Cascade.
+Orchestrates the full query flow: SOT Lookup → Distance → Classify → Route → Generate → Cascade.
 
-**Implementation:** `src/pipeline.py`
+**Implementation:** `src/model_router/pipeline.py` (class `RoutingPipeline`)
 
 ---
 
@@ -13,24 +13,14 @@ Orchestrates the full query flow: Safety → SOT → Distance → Route → Gene
 The system SHALL process queries through all pipeline stages in order.
 
 #### Scenario: Happy path
-- **WHEN** a safe, in-domain query is received
+- **WHEN** a query is received
 - **THEN** execute in order:
-  1. Safety check passes
-  2. SOT lookup returns distance
-  3. Distance determines complexity
+  1. SOT lookup returns distance
+  2. Distance determines complexity
+  3. Classifier produces complexity + task label
   4. Router selects tier and model
   5. Generation produces response
-  6. Optional cascade verification
-
-#### Scenario: Blocked by safety
-- **WHEN** a query is flagged as harmful
-- **THEN** return immediately with rejection message
-- **AND** no SOT lookup, routing, or generation occurs
-
-#### Scenario: Rebuked for off-topic
-- **WHEN** a query is flagged as off-topic
-- **THEN** return immediately with gentle redirect
-- **AND** no generation cost incurred
+  6. Optional cascade escalation
 
 ---
 
@@ -47,7 +37,6 @@ The system SHALL optionally augment moderate-distance queries with web search.
 - **WHEN** no search backend is configured
 - **THEN** skip web search gracefully
 - **AND** respond using SOT context only
-- **AND** note the missing backend in response
 
 ---
 
@@ -75,7 +64,7 @@ The system SHALL record every response for dashboard and stats.
 - **WHEN** `get_stats()` is called
 - **THEN** return:
   - Total routes, tier distribution
-  - Number of rebukes, web searches, deep reasoning calls
+  - Number of web searches, deep reasoning calls
   - Average tokens and latency
 
 ---
@@ -83,8 +72,7 @@ The system SHALL record every response for dashboard and stats.
 ## Success Criteria
 
 - [ ] Full pipeline processes queries end-to-end
-- [ ] Safety block returns immediately
-- [ ] Off-topic rebuke returns without generation
+- [ ] Distance classification determines routing tier
 - [ ] Web search results included in prompts
 - [ ] Deep reasoning chain included in prompts
 - [ ] History limited to 1000 entries

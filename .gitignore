@@ -5,3 +5,12 @@ __pycache__/
 *.egg-info/
 dist/
 build/
+.pytest_cache/
+node_modules/
+.npm-cache/
+Intelligent Routing Analytics Dashboard/
+business-website-template/
+data/
+scripts/
+*.log
+.DS_Store

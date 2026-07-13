@@ -1,22 +1,22 @@
 # Model Router — Project Context
 
 ## Purpose
-**Model Router** is a Source-of-Truth chatbot-as-a-service. Every answer is grounded in a knowledge base. Query difficulty = embedding distance from nearest source document.
+**Model Router** is a cost-optimized LLM routing library. Classifies query complexity by distance from a source of truth, then selects the cheapest capable model from OpenRouter's free pool.
 
 ## Tech Stack
-- **Runtime:** Python 3.14+, FastAPI, uvicorn, websockets
-- **Embeddings:** sentence-transformers (all-MiniLM-L6-v2), fallback: character n-gram hashing
-- **Vector Store:** In-memory (numpy) with ChromaDB option
-- **LLMs:** OpenRouter API (27 free models across 3 tiers)
+- **Runtime:** Python 3.11+, requests
+- **Embeddings:** Dice coefficient on content words (zero deps). Optional: sentence-transformers (all-MiniLM-L6-v2)
+- **Vector Store:** In-memory Source of Truth
+- **LLMs:** OpenRouter API (25+ free models across 3 tiers)
 - **Search:** SearXNG (local meta-search)
-- **Storage:** Local filesystem (JSON/CSV for datasets, pickle for models)
+- **Dashboard:** FastAPI + WebSocket + Tailwind
 
 ## Design Principles
 1. **Zero hardcoded values** — every threshold in constants/config
 2. **Graceful degradation** — every module has a fallback path
-3. **No external dependencies for core** — n-gram fallback when sentence-transformers absent
+3. **No external dependencies for core** — Dice coefficient works without ML libs
 4. **Distance as difficulty** — single metric drives routing decisions
-5. **Safety first** — harmful content blocked before any processing
+5. **Library, not chatbot** — no safety guards, no domain prompts, no conversation management
 
 ## Code Conventions
 - 100-char line limit, 4-space indent
@@ -27,30 +27,16 @@
 
 ## File Structure
 ```
-src/
-├── sot/
-│   ├── source_of_truth.py   # Vector KB
-│   └── safety.py            # Safety guard
-├── data/
-│   ├── scraper.py           # Dataset scraping + SOT seeding
-│   ├── dataset.py           # Dataset management
-│   └── clean.py             # Text cleaning
-├── train/
-│   ├── embedder.py          # Fine-tune embedding model
-│   └── evaluate.py          # Distance accuracy eval
-├── router/
-│   ├── engine.py            # CostRouter
-│   ├── cascade.py           # Self-verify cascade
-│   └── client.py            # OpenRouter API
-├── search/
-│   └── web_search.py        # SearXNG integration
-├── reasoning/
-│   └── deep_reasoning.py    # Multi-step CoT
-├── dashboard/
-│   └── app.py               # FastAPI + WebSocket
-├── pipeline.py              # Main orchestrator
-├── cli.py                   # CLI entry
-├── config.py                # Env-based config
-├── models.py                # Shared data models
-└── constants.py             # Model pool definitions
+src/model_router/
+├── __init__.py       # Public API
+├── _version.py       # 0.2.0
+├── config.py         # Env-based config
+├── models.py         # Data models
+├── constants.py      # Model pool definitions
+├── router.py         # CostRouter
+├── client.py         # OpenRouter API client
+├── store.py          # Source of Truth (Dice coefficient)
+├── classify.py       # Distance-based classification
+├── search.py         # SearXNG integration
+└── pipeline.py       # Main orchestrator
 ```
