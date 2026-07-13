@@ -404,13 +404,20 @@ class RoutingPipeline:
 
     @staticmethod
     def _fallbacks_for(tier: str) -> list[str]:
-        """Return alternate model IDs in the same tier for fallback."""
+        """Return alternate model IDs in the same tier for fallback.
+
+        Appends openrouter/free as the ultimate catch-all so that if every
+        specific free model is rate-limited / down, the meta-router picks
+        whichever free model has capacity.
+        """
         models = TIER_MODELS.get(tier, [])
         if not models:
-            return []
+            return ["openrouter/free"]
         # Sorted smallest-first (same as router picks), skip index 0 (primary)
         sorted_m = sorted(models, key=lambda m: m.total_params_b or 0)
-        return [m.openrouter_id for m in sorted_m[1:]]
+        fallbacks = [m.openrouter_id for m in sorted_m[1:]]
+        fallbacks.append("openrouter/free")
+        return fallbacks
 
     def _record_response(self, response: RouteResponse):
         self.history.append(response)

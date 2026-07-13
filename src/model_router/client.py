@@ -90,7 +90,7 @@ class OpenRouterClient:
         self,
         api_key: str,
         timeout: int = 60,
-        retry_count: int = 3,
+        retry_count: int = 2,
         base_delay: float = 1.0,
         max_delay: float = 30.0,
         circuit_breaker: Optional[CircuitBreaker] = None,
@@ -234,7 +234,7 @@ class OpenRouterClient:
                     time.sleep(wait)
                     continue
 
-                # --- Non-retryable error ---
+                # --- Non-retryable — fall through to exhaustion ---
                 error_msg = f"API error {resp.status_code}: {resp.text[:200]}"
                 logger.error("%s — %s", error_msg, model_id)
                 self.circuit_breaker.record_failure(model_id)
