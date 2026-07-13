@@ -25,11 +25,18 @@ class RouterConfig:
 
     # Routing
     default_tier: str = "thinking"
-    rate_limit_retry_count: int = 2
+    rate_limit_retry_count: int = 3          # max retries per model call
+    rate_limit_base_delay: float = 1.0       # base backoff in seconds
+    rate_limit_max_delay: float = 30.0       # cap for exponential backoff
 
-    # Cascade (optional escalation to next tier)
+    # Cascade (escalation to next tier on low confidence)
     cascade_enabled: bool = True
-    cascade_max_hops: int = 1
+    cascade_max_hops: int = 2                # fast → thinking → deep max
+    cascade_max_budget_tokens: int = 10000   # hard cap across all hops
+
+    # Circuit breaker (skip failing models temporarily)
+    circuit_breaker_cooldown: int = 60       # seconds to skip a model
+    circuit_breaker_max_failures: int = 3    # failures before tripping
 
     # Dashboard
     dashboard_host: str = "0.0.0.0"
@@ -46,6 +53,11 @@ def get_config() -> RouterConfig:
         openrouter_api_key=os.getenv("OPENROUTER_API_KEY", ""),
         request_timeout_seconds=int(os.getenv("REQUEST_TIMEOUT", "60")),
         cascade_enabled=os.getenv("CASCADE_ENABLED", "true").lower() == "true",
+        cascade_max_hops=int(os.getenv("CASCADE_MAX_HOPS", "2")),
+        cascade_max_budget_tokens=int(os.getenv("CASCADE_MAX_BUDGET", "10000")),
         log_level=os.getenv("LOG_LEVEL", "INFO"),
         dashboard_port=int(os.getenv("DASHBOARD_PORT", "8080")),
+        rate_limit_retry_count=int(os.getenv("RATE_LIMIT_RETRIES", "3")),
+        circuit_breaker_cooldown=int(os.getenv("CB_COOLDOWN", "60")),
+        circuit_breaker_max_failures=int(os.getenv("CB_MAX_FAILURES", "3")),
     )

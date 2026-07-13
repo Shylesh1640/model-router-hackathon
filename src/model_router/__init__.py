@@ -27,7 +27,7 @@ from .models import (
     SubTask,
 )
 from .router import CostRouter
-from .client import OpenRouterClient
+from .client import OpenRouterClient, CircuitBreaker
 from .store import SourceOfTruth
 from .classify import DistanceClassifier
 from .search import WebSearcher
@@ -55,6 +55,7 @@ __all__ = [
     "SubTask",
     "CostRouter",
     "OpenRouterClient",
+    "CircuitBreaker",
     "SourceOfTruth",
     "DistanceClassifier",
     "WebSearcher",

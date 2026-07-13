@@ -69,6 +69,8 @@ class RoutingPipeline:
             api_key=self.config.openrouter_api_key,
             timeout=self.config.request_timeout_seconds,
             retry_count=self.config.rate_limit_retry_count,
+            base_delay=self.config.rate_limit_base_delay,
+            max_delay=self.config.rate_limit_max_delay,
         )
         self.searcher = WebSearcher(search_url="http://localhost:8080")
         self.telemetry = telemetry or get_telemetry()
@@ -312,34 +314,87 @@ class RoutingPipeline:
         routing: RoutingDecision,
         classification: ClassificationResult,
     ) -> GenerationResult:
+        """Escalate to next tier on low confidence, with guards.
+
+        Guards:
+        - No cascade if the generation already errored or cascade is disabled.
+        - No cascade if confidence is high or we're already at the deepest tier.
+        - Max cascade hops (`cascade_max_hops`) — prevents infinite loops.
+        - Token budget cap (`cascade_max_budget_tokens`) — prevents runaway cost.
+        - Emergency fallback to openrouter/free if cascade also fails.
+        """
         if generation.error or not self.config.cascade_enabled:
             return generation
         if classification.confidence > 0.7 or routing.tier == "deep":
             return generation
 
+        # Track cascade hops on the request object
+        request._cascade_hops = getattr(request, "_cascade_hops", 0) + 1
+        if request._cascade_hops > self.config.cascade_max_hops:
+            logger.warning(
+                "Max cascade hops (%d) reached, returning current result",
+                self.config.cascade_max_hops,
+            )
+            return generation
+
+        # Track estimated token budget
+        estimated = {"fast": 500, "thinking": 1500, "deep": 4000}.get(
+            routing.tier, 1000
+        )
+        request._cascade_budget = (
+            getattr(request, "_cascade_budget", 0) + estimated
+        )
+        if request._cascade_budget > self.config.cascade_max_budget_tokens:
+            logger.warning(
+                "Cascade budget exceeded (%d > %d), returning current result",
+                request._cascade_budget,
+                self.config.cascade_max_budget_tokens,
+            )
+            return generation
+
         next_tier = self._next_tier(routing.tier)
-        if next_tier:
-            next_model = DEFAULT_MODEL_PER_TIER.get(
-                next_tier,
-                "meta-llama/llama-3.3-70b-instruct:free",
+        if not next_tier:
+            return generation
+
+        next_model = DEFAULT_MODEL_PER_TIER.get(next_tier)
+        if not next_model:
+            return generation
+
+        cascade_result = self.client.generate(
+            request.query, next_model, next_tier
+        )
+        cascade_result.cascade_escalated = True
+        cascade_result.cascade_from_tier = routing.tier
+        cascade_result.cascade_to_tier = next_tier
+
+        # Emergency fallback — if cascade also failed, try openrouter/free
+        if cascade_result.error:
+            fallback_id = "openrouter/free"
+            logger.warning(
+                "Cascade to %s (%s) failed: %s. Trying emergency fallback: %s",
+                next_tier, next_model, cascade_result.error, fallback_id,
             )
-            cascade_result = self.client.generate(
-                request.query, next_model, next_tier
+            fallback = self.client.generate(
+                request.query, fallback_id, "deep"
             )
-            cascade_result.cascade_escalated = True
-            cascade_result.cascade_from_tier = routing.tier
-            cascade_result.cascade_to_tier = next_tier
-            return cascade_result
-        return generation
+            fallback.cascade_escalated = True
+            fallback.cascade_from_tier = routing.tier
+            fallback.cascade_to_tier = "emergency"
+            return fallback
+
+        return cascade_result
 
     @staticmethod
     def _next_tier(current: str) -> Optional[str]:
-        ladder = ["grounded", "web_search", "deep_reasoning"]
+        """Return the next tier up, or None if already at max."""
+        ladder = ["fast", "thinking", "deep"]
         try:
             idx = ladder.index(current)
-            return ladder[min(idx + 1, len(ladder) - 1)]
+            if idx >= len(ladder) - 1:
+                return None
+            return ladder[idx + 1]
         except ValueError:
-            return "deep_reasoning"
+            return None
 
     def _record_response(self, response: RouteResponse):
         self.history.append(response)

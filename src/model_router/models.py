@@ -236,6 +236,10 @@ class RouteRequest:
     force_tier: Optional[str] = None
     cascade: Optional[bool] = None
 
+    # Internal cascade tracking (set by pipeline, not user-facing)
+    _cascade_hops: int = field(default=0, repr=False)
+    _cascade_budget: int = field(default=0, repr=False)
+
 
 @dataclass
 class RouteResponse:
