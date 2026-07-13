@@ -55,9 +55,9 @@ def test_complexity_from_distance():
     assert sot.complexity_from_distance(0.59) == "close"
     # Strict < threshold — 0.60 maps to moderate
     assert sot.complexity_from_distance(0.60) == "moderate"
-    assert sot.complexity_from_distance(0.84) == "moderate"
-    # 0.85 maps to distant (strict <)
-    assert sot.complexity_from_distance(0.85) == "distant"
+    assert sot.complexity_from_distance(0.79) == "moderate"
+    # 0.80 maps to distant (strict <)
+    assert sot.complexity_from_distance(0.80) == "distant"
 
 
 def test_dice_similarity_identical():

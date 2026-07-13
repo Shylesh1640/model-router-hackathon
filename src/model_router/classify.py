@@ -25,7 +25,7 @@ class DistanceClassifier:
     """
 
     CLOSE_THRESHOLD = 0.60
-    MODERATE_THRESHOLD = 0.85
+    MODERATE_THRESHOLD = 0.80
 
     def classify(
         self,

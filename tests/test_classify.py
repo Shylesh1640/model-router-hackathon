@@ -58,16 +58,16 @@ def test_classify_boundary_close():
 
 def test_classify_boundary_moderate():
     classifier = DistanceClassifier()
-    # Strict < means 0.85 maps to distant
+    # Strict < threshold means 0.80 maps to distant
     source = SourceQueryResult(
-        query="test", min_distance=0.85,
+        query="test", min_distance=0.80,
         total_docs=5,
     )
     result = classifier.classify("test", source)
     assert result.complexity == "distant"
     # Just under boundary → moderate
     moderate_source = SourceQueryResult(
-        query="test", min_distance=0.84,
+        query="test", min_distance=0.79,
         total_docs=5,
     )
     moderate_result = classifier.classify("test", moderate_source)
