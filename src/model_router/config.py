@@ -17,14 +17,14 @@ class RouterConfig:
         default_factory=lambda: os.getenv("OPENROUTER_API_KEY", "")
     )
     openrouter_base_url: str = "https://openrouter.ai/api/v1"
-    request_timeout_seconds: int = 60
+    request_timeout_seconds: int = 20
 
     # Classification
     complexity_method: str = "hybrid"
     embedding_model: str = "all-MiniLM-L6-v2"
 
     # Routing
-    default_tier: str = "thinking"
+    default_tier: str = "fast"
     rate_limit_retry_count: int = 3          # max retries per model call
     rate_limit_base_delay: float = 1.0       # base backoff in seconds
     rate_limit_max_delay: float = 30.0       # cap for exponential backoff
@@ -51,7 +51,7 @@ def get_config() -> RouterConfig:
     """Load config from environment, with env var overrides."""
     return RouterConfig(
         openrouter_api_key=os.getenv("OPENROUTER_API_KEY", ""),
-        request_timeout_seconds=int(os.getenv("REQUEST_TIMEOUT", "60")),
+        request_timeout_seconds=int(os.getenv("REQUEST_TIMEOUT", "20")),
         cascade_enabled=os.getenv("CASCADE_ENABLED", "true").lower() == "true",
         cascade_max_hops=int(os.getenv("CASCADE_MAX_HOPS", "2")),
         cascade_max_budget_tokens=int(os.getenv("CASCADE_MAX_BUDGET", "10000")),

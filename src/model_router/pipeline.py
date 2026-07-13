@@ -122,16 +122,30 @@ class RoutingPipeline:
         needs_vision = decomposition.needs_vision
 
         # =====================================================================
-        # STAGE 2: SOURCE OF TRUTH LOOKUP
+        # STAGE 2: SOURCE OF TRUTH LOOKUP  (skipped for trivial intents)
         # =====================================================================
-        sot_span = trace.span(name="sot_lookup")
-        source_result = self.sot.query(request.query)
-        distance = source_result.min_distance
-        sot_span.end(output={
-            "distance": distance,
-            "matches": len(source_result.matches),
-            "total_docs": source_result.total_docs,
-        })
+        _trivial_intents = {"general", "command", "summarization"}
+        _skip_sot = (
+            intent.intent in _trivial_intents
+            and not needs_reasoning
+            and not needs_vision
+            and not request.force_tier
+        )
+
+        if _skip_sot:
+            # Trivial intent → skip expensive embedding lookup, treat as empty SOT
+            source_result = SourceQueryResult(query=request.query, total_docs=0)
+            source_result.min_distance = 1.0
+            distance = 1.0
+        else:
+            sot_span = trace.span(name="sot_lookup")
+            source_result = self.sot.query(request.query)
+            distance = source_result.min_distance
+            sot_span.end(output={
+                "distance": distance,
+                "matches": len(source_result.matches),
+                "total_docs": source_result.total_docs,
+            })
 
         # =====================================================================
         # STAGE 3: CLASSIFY COMPLEXITY
