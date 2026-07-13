@@ -9,8 +9,12 @@ import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 
+from dotenv import load_dotenv
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Query
 from fastapi.responses import HTMLResponse
+
+# Load .env before anything else reads config
+load_dotenv()
 
 from model_router.config import get_config
 from model_router.models import RouteRequest

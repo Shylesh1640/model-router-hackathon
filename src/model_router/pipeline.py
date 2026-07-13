@@ -36,7 +36,7 @@ from .search import WebSearcher
 from .intent import IntentDetector
 from .decompose import DecompositionAnalyzer
 from .telemetry import get_telemetry, Telemetry
-from .constants import DEFAULT_MODEL_PER_TIER
+from .constants import DEFAULT_MODEL_PER_TIER, TIER_MODELS, ALL_MODELS
 
 logger = logging.getLogger(__name__)
 
@@ -177,7 +177,8 @@ class RoutingPipeline:
                 request.query, source_context, search_context=search_context
             )
             generation = self.client.generate(
-                prompt, routing.model_id, routing.tier
+                prompt, routing.model_id, routing.tier,
+                fallback_models=self._fallbacks_for(routing.tier),
             )
             generation.web_search_used = True
             generation.web_search_results = search_results
@@ -195,7 +196,8 @@ class RoutingPipeline:
                 reasoning_steps=steps,
             )
             generation = self.client.generate(
-                prompt, routing.model_id, routing.tier
+                prompt, routing.model_id, routing.tier,
+                fallback_models=self._fallbacks_for(routing.tier),
             )
             generation.web_search_used = bool(search_results)
             generation.web_search_results = search_results
@@ -206,10 +208,9 @@ class RoutingPipeline:
             # Grounded — answer directly from source
             prompt = self._build_prompt(request.query, source_context)
             generation = self.client.generate(
-                prompt, routing.model_id, routing.tier
+                prompt, routing.model_id, routing.tier,
+                fallback_models=self._fallbacks_for(routing.tier),
             )
-
-        # Stage 6: Cascade if needed
         generation = self._maybe_cascade(
             request, generation, routing, classification
         )
@@ -396,6 +397,16 @@ class RoutingPipeline:
             return ladder[idx + 1]
         except ValueError:
             return None
+
+    @staticmethod
+    def _fallbacks_for(tier: str) -> list[str]:
+        """Return alternate model IDs in the same tier for fallback."""
+        models = TIER_MODELS.get(tier, [])
+        if not models:
+            return []
+        # Sorted smallest-first (same as router picks), skip index 0 (primary)
+        sorted_m = sorted(models, key=lambda m: m.total_params_b or 0)
+        return [m.openrouter_id for m in sorted_m[1:]]
 
     def _record_response(self, response: RouteResponse):
         self.history.append(response)

@@ -120,6 +120,44 @@ class OpenRouterClient:
         temperature: float = 0.7,
         system_prompt: Optional[str] = None,
         on_attempt: Optional[Callable] = None,
+        fallback_models: Optional[list[str]] = None,
+    ) -> GenerationResult:
+        """Generate, with jittered backoff and circuit-breaker awareness.
+
+        If the primary ``model_id`` fails with a retryable error after all
+        retries, tries each ``fallback_models`` in order (same tier).
+        """
+        result = self._generate_single(
+            query, model_id, tier, max_tokens, temperature,
+            system_prompt, on_attempt,
+        )
+        if result.error and fallback_models:
+            for fb_id in fallback_models:
+                if fb_id == model_id:
+                    continue
+                if self.circuit_breaker.is_open(fb_id):
+                    continue
+                logger.warning(
+                    "Primary model %s failed, trying fallback: %s",
+                    model_id, fb_id,
+                )
+                result = self._generate_single(
+                    query, fb_id, tier, max_tokens, temperature,
+                    system_prompt, on_attempt,
+                )
+                if not result.error:
+                    break
+        return result
+
+    def _generate_single(
+        self,
+        query: str,
+        model_id: str,
+        tier: str,
+        max_tokens: int = 1024,
+        temperature: float = 0.7,
+        system_prompt: Optional[str] = None,
+        on_attempt: Optional[Callable] = None,
     ) -> GenerationResult:
         """Generate, with jittered backoff and circuit-breaker awareness.
 
