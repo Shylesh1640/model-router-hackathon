@@ -29,7 +29,7 @@ from .models import (
 from .router import CostRouter
 from .client import OpenRouterClient, CircuitBreaker
 from .store import SourceOfTruth
-from .classify import DistanceClassifier
+from .heatmap import HeatmapClassifier, MatchSignature
 from .search import WebSearcher
 from .intent import IntentDetector
 from .decompose import DecompositionAnalyzer
@@ -56,6 +56,8 @@ __all__ = [
     "CostRouter",
     "OpenRouterClient",
     "CircuitBreaker",
+    "HeatmapClassifier",
+    "MatchSignature",
     "SourceOfTruth",
     "DistanceClassifier",
     "WebSearcher",

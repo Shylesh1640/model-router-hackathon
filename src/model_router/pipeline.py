@@ -31,6 +31,7 @@ from .router import CostRouter
 from .client import OpenRouterClient
 from .store import SourceOfTruth
 from .classify import DistanceClassifier
+from .heatmap import HeatmapClassifier
 from .search import WebSearcher
 from .intent import IntentDetector
 from .decompose import DecompositionAnalyzer
@@ -61,7 +62,7 @@ class RoutingPipeline:
     ):
         self.config = config or get_config()
         self.sot = SourceOfTruth()
-        self.classifier = DistanceClassifier()
+        self.classifier = HeatmapClassifier()
         self.router = CostRouter()
         self.intent_detector = IntentDetector()
         self.decomposer = DecompositionAnalyzer()
