@@ -54,6 +54,7 @@ def seed_sot_from_csv(csv_path: str, max_rows: int = 500):
 
 def broadcast(route_response):
     """Push route decision to all connected dashboard clients."""
+    meta = route_response.classification.metadata or {}
     data = {
         "type": "route",
         "query": route_response.query,
@@ -71,6 +72,13 @@ def broadcast(route_response):
         "latency_ms": route_response.generation.latency_ms,
         "escalated": route_response.generation.cascade_escalated,
         "error": route_response.generation.error,
+        # Heatmap metadata
+        "match_density": meta.get("match_density"),
+        "coverage": meta.get("coverage"),
+        "concentration": meta.get("concentration"),
+        "matched_words": meta.get("matched_words"),
+        "query_words": meta.get("query_words"),
+        "docs_hit": meta.get("docs_hit"),
     }
     for ws in _websockets[:]:
         try:
@@ -169,6 +177,7 @@ async def websocket_endpoint(ws: WebSocket):
 
 
 def _response_to_dict(r) -> dict:
+    meta = r.classification.metadata or {}
     return {
         "query": r.query,
         "response": r.response[:500],
@@ -186,6 +195,13 @@ def _response_to_dict(r) -> dict:
         "escalated": r.generation.cascade_escalated,
         "error": r.generation.error,
         "timestamp": r.generation.timestamp.isoformat(),
+        # Heatmap
+        "match_density": meta.get("match_density"),
+        "coverage": meta.get("coverage"),
+        "concentration": meta.get("concentration"),
+        "matched_words": meta.get("matched_words"),
+        "query_words": meta.get("query_words"),
+        "docs_hit": meta.get("docs_hit"),
     }
 
 
@@ -212,283 +228,408 @@ DASHBOARD_HTML = r"""<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Model Router — Dashboard</title>
-<script src="https://cdn.tailwindcss.com"></script>
+<title>Model Router — Cost-Optimized LLM Routing</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-  body { background: #0f172a; color: #e2e8f0; font-family: 'Inter', sans-serif; }
-  .tier-fast { border-left: 4px solid #22c55e; }
-  .tier-thinking { border-left: 4px solid #f59e0b; }
-  .tier-deep { border-left: 4px solid #a855f7; }
-  .card { background: #1e293b; border-radius: 12px; padding: 1rem; }
-  .badge { padding: 2px 8px; border-radius: 999px; font-size: 0.75rem; font-weight: 600; }
-  .badge-fast { background: #166534; color: #86efac; }
-  .badge-thinking { background: #92400e; color: #fcd34d; }
-  .badge-deep { background: #581c87; color: #d8b4fe; }
-  .mono { font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; }
-  .fade-in { animation: fadeIn 0.3s ease-in; }
-  @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
-  .entry { transition: all 0.2s; }
-  .entry:hover { background: #334155; }
+:root {
+  --bg: #000000;
+  --surface: #050505;
+  --card: #0C0C0C;
+  --card-hover: #101010;
+  --border: #1A1A1A;
+  --border-hover: #222222;
+  --border-strong: #2A2A2A;
+  --text: #E8E6E3;
+  --text-secondary: #888888;
+  --text-muted: #555555;
+  --accent: #2A2A2A;
+  --accent-hover: #3A3A3A;
+  --fast-bg: #1A2A1A;
+  --fast-text: #5A8A5A;
+  --thinking-bg: #2A2A1A;
+  --thinking-text: #8A7A4A;
+  --deep-bg: #2A1A2A;
+  --deep-text: #7A5A8A;
+  --error: #5A1A1A;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  min-height: 100vh;
+}
+/* ─── TYPOGRAPHY ─── */
+h1, h2, h3 { font-family: 'Unbounded', sans-serif; font-weight: 700; letter-spacing: -0.01em; line-height: 1.1; }
+h1 { font-size: 2.5rem; }
+h2 { font-size: 1.25rem; letter-spacing: 0; }
+.mono { font-family: 'JetBrains Mono', monospace; font-size: 0.8125rem; }
+.label { font-family: 'Inter', sans-serif; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; }
+/* ─── LAYOUT ─── */
+.wrapper { max-width: 1280px; margin: 0 auto; padding: 48px 32px; }
+.section { margin-bottom: 32px; }
+/* ─── HERO ─── */
+.hero { border-bottom: 1px solid var(--border); padding-bottom: 32px; margin-bottom: 40px; }
+.hero h1 { margin-bottom: 8px; }
+.hero .tagline { color: var(--text-secondary); font-size: 1.125rem; max-width: 540px; }
+.hero-meta { display: flex; gap: 24px; margin-top: 20px; }
+.hero-meta > div { display: flex; align-items: center; gap: 8px; }
+.status-dot { width: 8px; height: 8px; background: var(--error); display: inline-block; }
+.status-dot.connected { background: #7ACC7A; }
+/* ─── CARDS ─── */
+.card { background: var(--card); padding: 24px; border: 1px solid var(--border); }
+.card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+/* ─── STATS ─── */
+.stats-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 1px; background: var(--border); border: 1px solid var(--border); }
+.stat { background: var(--card); padding: 20px 16px; text-align: center; }
+.stat-value { font-family: 'Unbounded', sans-serif; font-size: 1.75rem; font-weight: 700; }
+.stat-label { color: var(--text-secondary); font-size: 0.75rem; letter-spacing: 0.08em; margin-top: 4px; }
+/* ─── MAIN GRID ─── */
+.main-grid { display: grid; grid-template-columns: 1fr 320px; gap: 24px; }
+/* ─── FEED ─── */
+.feed { max-height: 540px; overflow-y: auto; }
+.feed-empty { color: var(--text-secondary); text-align: center; padding: 48px 0; font-size: 0.875rem; }
+.entry {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 12px 16px; margin-bottom: 4px;
+  border-left: 3px solid var(--border);
+  transition: background 0.15s; cursor: default;
+}
+.entry:hover { background: var(--card-hover); }
+.entry-fast { border-left-color: var(--fast-text); }
+.entry-thinking { border-left-color: var(--thinking-text); }
+.entry-deep { border-left-color: var(--deep-text); }
+.entry-body { flex: 1; min-width: 0; }
+.entry-tags { display: flex; gap: 6px; align-items: center; margin-bottom: 4px; flex-wrap: wrap; }
+.entry-query { font-size: 0.875rem; font-weight: 500; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.entry-response { font-size: 0.8125rem; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.entry-meta { text-align: right; font-size: 0.75rem; color: var(--text-secondary); white-space: nowrap; }
+.entry-heatmap { margin-top: 6px; display: flex; gap: 4px; flex-wrap: wrap; }
+.heat-dot { width: 8px; height: 14px; background: var(--border-strong); display: inline-block; }
+.heat-hit { background: var(--text-muted); }
+.heat-word { font-size: 0.625rem; color: var(--text-secondary); font-family: 'JetBrains Mono', monospace; margin-right: 2px; }
+/* ─── BADGES ─── */
+.badge { display: inline-block; padding: 2px 10px; font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.04em; }
+.badge-fast { background: var(--fast-bg); color: var(--fast-text); }
+.badge-thinking { background: var(--thinking-bg); color: var(--thinking-text); }
+.badge-deep { background: var(--deep-bg); color: var(--deep-text); }
+.badge-close { background: #1A1A1A; color: #5A8A5A; }
+.badge-moderate { background: #1A1A1A; color: #8A7A4A; }
+.badge-distant { background: #1A1A1A; color: #7A5A8A; }
+/* ─── QUERY BAR ─── */
+.query-bar { display: flex; gap: 0; border: 1px solid var(--border); }
+.query-bar input {
+  flex: 1; background: var(--bg); border: none; padding: 16px;
+  color: var(--text); font-family: 'Inter', sans-serif; font-size: 0.9375rem;
+  outline: none;
+}
+.query-bar input::placeholder { color: var(--text-muted); }
+.query-bar select {
+  background: var(--card); border: none; border-left: 1px solid var(--border);
+  padding: 0 16px; color: var(--text-secondary); font-size: 0.8125rem;
+  font-family: 'Inter', sans-serif; outline: none; cursor: pointer;
+}
+.query-bar button {
+  background: var(--accent); border: none; padding: 0 24px;
+  color: var(--text); font-family: 'Inter', sans-serif;
+  font-size: 0.75rem; font-weight: 700; letter-spacing: 0.12em;
+  text-transform: uppercase; cursor: pointer; transition: background 0.15s;
+}
+.query-bar button:hover { background: var(--accent-hover); }
+/* ─── MODEL POOL ─── */
+.model-tier { margin-bottom: 16px; }
+.model-tier:last-child { margin-bottom: 0; }
+.model-tier-header { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.08em; margin-bottom: 8px; }
+.model-item { font-size: 0.75rem; color: var(--text-secondary); padding: 2px 0; }
+/* ─── FILTERS ─── */
+.filters { display: flex; gap: 8px; }
+.filters select {
+  background: var(--bg); border: 1px solid var(--border); padding: 4px 10px;
+  color: var(--text-secondary); font-size: 0.75rem; font-family: 'Inter', sans-serif;
+  outline: none; cursor: pointer;
+}
+/* ─── SCROLLBAR ─── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #333; }
+/* ─── ANIMATIONS ─── */
+@keyframes fadeIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
+.entry { animation: fadeIn 0.25s ease-out; }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+.loading { animation: pulse 1.5s ease-in-out infinite; }
 </style>
 </head>
-<body class="p-6">
-  <div class="max-w-7xl mx-auto">
+<body>
+<div class="wrapper">
 
-    <!-- Header -->
-    <div class="flex items-center justify-between mb-8">
+  <!-- ═══════════ HERO ═══════════ -->
+  <div class="hero">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between">
       <div>
-        <h1 class="text-3xl font-bold text-white">Model Router</h1>
-        <p class="text-slate-400 text-sm">Cost-optimized LLM routing · OpenRouter free pool</p>
+        <h1>Model Router</h1>
+        <p class="tagline">Cost-optimized LLM routing — classify complexity, pick the cheapest capable model from the OpenRouter free pool.</p>
       </div>
-      <div class="flex gap-4 items-center">
-        <div id="connection-status" class="flex items-center gap-2">
-          <span class="w-2 h-2 rounded-full bg-red-500" id="status-dot"></span>
-          <span class="text-sm text-slate-400" id="status-text">Disconnected</span>
+      <div class="hero-meta">
+        <div>
+          <span class="status-dot" id="status-dot"></span>
+          <span class="mono" id="status-text" style="font-size:0.75rem;color:var(--text-secondary)">disconnected</span>
         </div>
-        <button onclick="testRoute()" class="bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded-lg text-sm font-medium transition">Test Route</button>
+        <div class="mono" id="hero-model-count" style="font-size:0.75rem;color:var(--text-secondary)">— models</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ STATS ═══════════ -->
+  <div class="stats-grid section" id="stats-grid">
+    <div class="stat"><div class="stat-value" id="stat-total">0</div><div class="stat-label">Routes</div></div>
+    <div class="stat"><div class="stat-value" style="color:var(--fast-text)" id="stat-fast">0</div><div class="stat-label">Fast</div></div>
+    <div class="stat"><div class="stat-value" style="color:var(--thinking-text)" id="stat-thinking">0</div><div class="stat-label">Thinking</div></div>
+    <div class="stat"><div class="stat-value" style="color:var(--deep-text)" id="stat-deep">0</div><div class="stat-label">Deep</div></div>
+    <div class="stat"><div class="stat-value" style="color:#D4A84B" id="stat-escalated">0</div><div class="stat-label">Escalated</div></div>
+    <div class="stat"><div class="stat-value" id="stat-tokens">0</div><div class="stat-label">Tokens Used</div></div>
+  </div>
+
+  <!-- ═══════════ MAIN GRID ═══════════ -->
+  <div class="main-grid section">
+
+    <!-- LEFT: Feed -->
+    <div class="card">
+      <div class="card-header">
+        <h2>Live Feed</h2>
+        <div class="filters">
+          <select id="tier-filter" onchange="applyFilter()">
+            <option value="all">All Tiers</option>
+            <option value="fast">Fast</option>
+            <option value="thinking">Thinking</option>
+            <option value="deep">Deep</option>
+          </select>
+          <select id="complexity-filter" onchange="applyFilter()">
+            <option value="all">All Complexity</option>
+            <option value="close">Close</option>
+            <option value="moderate">Moderate</option>
+            <option value="distant">Distant</option>
+          </select>
+        </div>
+      </div>
+      <div class="feed" id="feed">
+        <div class="feed-empty">Awaiting queries — type below to begin</div>
       </div>
     </div>
 
-    <!-- Stats Row -->
-    <div class="grid grid-cols-5 gap-4 mb-8" id="stats-row">
-      <div class="card text-center">
-        <div class="text-2xl font-bold" id="stat-total">0</div>
-        <div class="text-xs text-slate-400">Total Routes</div>
+    <!-- RIGHT: Model Pool -->
+    <div class="card">
+      <div class="card-header">
+        <h2>Model Pool</h2>
       </div>
-      <div class="card text-center">
-        <div class="text-2xl font-bold text-green-400" id="stat-fast">0</div>
-        <div class="text-xs text-slate-400">Fast (cheap)</div>
-      </div>
-      <div class="card text-center">
-        <div class="text-2xl font-bold text-yellow-400" id="stat-thinking">0</div>
-        <div class="text-xs text-slate-400">Thinking</div>
-      </div>
-      <div class="card text-center">
-        <div class="text-2xl font-bold text-purple-400" id="stat-deep">0</div>
-        <div class="text-xs text-slate-400">Deep</div>
-      </div>
-      <div class="card text-center">
-        <div class="text-2xl font-bold text-orange-400" id="stat-escalated">0</div>
-        <div class="text-xs text-slate-400">Escalations</div>
-      </div>
-    </div>
-
-    <!-- Main: History + Model Pool -->
-    <div class="grid grid-cols-3 gap-6">
-      <!-- History Feed -->
-      <div class="col-span-2 card">
-        <div class="flex items-center justify-between mb-4">
-          <h2 class="text-lg font-semibold">Live Feed</h2>
-          <div class="flex gap-2">
-            <select id="tier-filter" onchange="applyFilter()" class="bg-slate-700 text-sm rounded px-2 py-1 border border-slate-600">
-              <option value="all">All Tiers</option>
-              <option value="fast">Fast</option>
-              <option value="thinking">Thinking</option>
-              <option value="deep">Deep</option>
-            </select>
-            <select id="complexity-filter" onchange="applyFilter()" class="bg-slate-700 text-sm rounded px-2 py-1 border border-slate-600">
-              <option value="all">All Complexity</option>
-              <option value="close">Close</option>
-              <option value="moderate">Moderate</option>
-              <option value="distant">Distant</option>
-            </select>
-          </div>
-        </div>
-        <div id="feed" class="space-y-2 max-h-[600px] overflow-y-auto">
-          <div class="text-slate-500 text-sm text-center py-8">Waiting for routes...</div>
-        </div>
-      </div>
-
-      <!-- Model Pool -->
-      <div class="card">
-        <h2 class="text-lg font-semibold mb-4">Model Pool</h2>
-        <div id="model-pool" class="space-y-3">
-          <div class="text-slate-500 text-sm">Loading...</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Query Input -->
-    <div class="mt-6 card">
-      <div class="flex gap-4">
-        <input id="query-input" type="text" placeholder="Type a query to route..."
-          class="flex-1 bg-slate-700 rounded-lg px-4 py-3 text-white placeholder-slate-400 border border-slate-600 focus:outline-none focus:border-indigo-500"
-          onkeydown="if(event.key==='Enter') testRoute()">
-        <select id="force-tier" class="bg-slate-700 rounded-lg px-3 border border-slate-600 text-sm">
-          <option value="">Auto (cost-optimized)</option>
-          <option value="fast">Force Fast</option>
-          <option value="thinking">Force Thinking</option>
-          <option value="deep">Force Deep</option>
-        </select>
-        <button onclick="testRoute()"
-          class="bg-indigo-600 hover:bg-indigo-700 px-6 py-3 rounded-lg font-medium transition">
-          Route
-        </button>
+      <div id="model-pool">
+        <div class="mono" style="color:var(--text-secondary)">loading…</div>
       </div>
     </div>
 
   </div>
 
+  <!-- ═══════════ QUERY BAR ═══════════ -->
+  <div class="query-bar" style="margin-bottom:16px">
+    <input id="query-input" type="text" placeholder="Type a query to route…" onkeydown="if(event.key==='Enter') testRoute()">
+    <select id="force-tier">
+      <option value="">Auto (cost-optimized)</option>
+      <option value="fast">Fast tier</option>
+      <option value="thinking">Thinking tier</option>
+      <option value="deep">Deep tier</option>
+    </select>
+    <button onclick="testRoute()">Route</button>
+  </div>
+
+  <div style="color:var(--text-secondary);font-size:0.75rem;text-align:center;padding:16px 0 0;border-top:1px solid var(--border)">
+    <span class="mono">Model Router v0.2.0</span> · <span class="mono">OpenRouter free pool</span>
+  </div>
+</div>
+
 <script>
 let ws = null;
 let routes = [];
 
+// ─── Connection ──────────────────────────────────
 function connect() {
   const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  ws = new WebSocket(`${proto}//${window.location.host}/ws`);
-
+  ws = new WebSocket(proto + '//' + window.location.host + '/ws');
   ws.onopen = () => {
-    document.getElementById('status-dot').className = 'w-2 h-2 rounded-full bg-green-500';
-    document.getElementById('status-text').textContent = 'Connected';
+    document.getElementById('status-dot').className = 'status-dot connected';
+    document.getElementById('status-text').textContent = 'connected';
   };
-
   ws.onclose = () => {
-    document.getElementById('status-dot').className = 'w-2 h-2 rounded-full bg-red-500';
-    document.getElementById('status-text').textContent = 'Disconnected';
+    document.getElementById('status-dot').className = 'status-dot';
+    document.getElementById('status-text').textContent = 'disconnected';
     setTimeout(connect, 3000);
   };
-
-  ws.onmessage = (event) => {
-    const data = JSON.parse(event.data);
-    if (data.type === 'route') {
-      addRouteEntry(data);
-    }
+  ws.onmessage = (e) => {
+    const d = JSON.parse(e.data);
+    if (d.type === 'route') addRouteEntry(d);
   };
 }
 
-function addRouteEntry(data) {
-  routes.unshift(data);
-  if (routes.length > 200) routes.pop();
+// ─── Route Entry ──────────────────────────────────
+function addRouteEntry(d) {
+  routes.unshift(d);
+  if (routes.length > 500) routes.pop();
   applyFilter();
   updateStats();
 }
 
-function applyFilter() {
-  const tierFilter = document.getElementById('tier-filter').value;
-  const complexityFilter = document.getElementById('complexity-filter').value;
+// ─── Heatmap Mini ────────────────────────────────
+function heatmapHTML(d) {
+  if (!d.matched_words && d.matched_words !== 0) return '';
+  const qw = d.query_words || 0;
+  const mw = d.matched_words || 0;
+  const dh = d.docs_hit || 0;
+  // Word-match bar: filled dots for matched, empty for unmatched
+  let html = '<span class="heat-word">words</span>';
+  for (let i = 0; i < qw; i++) {
+    html += '<span class="heat-dot' + (i < mw ? ' heat-hit' : '') + '"></span>';
+  }
+  html += ' <span class="heat-word">docs</span><span class="heat-dot' + (dh > 0 ? ' heat-hit' : '') + '" style="width:' + Math.min(dh * 8, 40) + 'px"></span>';
+  if (d.match_density) {
+    html += ' <span class="heat-word">' + (d.match_density * 100).toFixed(0) + '%</span>';
+  }
+  return html;
+}
 
+// ─── Filter + Render ────────────────────────────
+function applyFilter() {
+  const tierF = document.getElementById('tier-filter').value;
+  const compF = document.getElementById('complexity-filter').value;
   const filtered = routes.filter(r => {
-    if (tierFilter !== 'all' && r.tier !== tierFilter) return false;
-    if (complexityFilter !== 'all' && r.complexity !== complexityFilter) return false;
+    if (tierF !== 'all' && r.tier !== tierF) return false;
+    if (compF !== 'all' && r.complexity !== compF) return false;
     return true;
   });
-
   const feed = document.getElementById('feed');
   if (filtered.length === 0) {
-    feed.innerHTML = '<div class="text-slate-500 text-sm text-center py-8">No matching routes</div>';
+    feed.innerHTML = '<div class="feed-empty">No matching routes</div>';
     return;
   }
-
-  feed.innerHTML = filtered.slice(0, 50).map(r => {
-    const tierClass = `tier-${r.tier}`;
-    const badgeClass = `badge-${r.tier}`;
-    const escaped = r.escalated ? ' <span class="text-orange-400 text-xs">↗ escalated</span>' : '';
-    const error = r.error ? ` <span class="text-red-400 text-xs">✗ ${r.error}</span>` : '';
-
-    return `
-      <div class="entry card fade-in ${tierClass}">
-        <div class="flex items-start justify-between gap-4">
-          <div class="flex-1 min-w-0">
-            <div class="flex items-center gap-2 mb-1">
-              <span class="badge ${badgeClass}">${r.tier}</span>
-              <span class="badge bg-slate-700 text-slate-300">${r.complexity}</span>
-              <span class="text-xs text-slate-500">${r.model_name}</span>
-              ${escaped}${error}
-            </div>
-            <div class="text-sm font-medium truncate">${escapeHtml(r.query)}</div>
-            <div class="text-xs text-slate-400 mt-1 mono truncate">${escapeHtml(r.response_preview || '')}</div>
-          </div>
-          <div class="text-right text-xs text-slate-500 whitespace-nowrap">
-            <div>${r.tokens_in + r.tokens_out} tok</div>
-            <div>${r.latency_ms}ms</div>
-          </div>
-        </div>
-      </div>
-    `;
+  feed.innerHTML = filtered.slice(0, 80).map(r => {
+    const tC = 'entry-' + (r.tier || 'deep');
+    const bC = 'badge-' + (r.tier || 'deep');
+    const cC = 'badge-' + (r.complexity || 'distant');
+    const tok = (r.tokens_in || 0) + (r.tokens_out || 0);
+    const err = r.error ? ' <span style="color:var(--error);font-size:0.75rem">✗</span>' : '';
+    const esc = r.escalated ? ' <span style="color:#D4A84B;font-size:0.75rem">↗</span>' : '';
+    const hm = heatmapHTML(r);
+    return '<div class="entry ' + tC + '">' +
+      '<div class="entry-body">' +
+        '<div class="entry-tags">' +
+          '<span class="badge ' + bC + '">' + (r.tier || '?') + '</span>' +
+          '<span class="badge ' + cC + '">' + (r.complexity || '?') + '</span>' +
+          '<span class="mono" style="font-size:0.6875rem;color:var(--text-secondary)">' + escapeHtml(r.model_name || '').slice(0, 24) + '</span>' +
+          esc + err +
+        '</div>' +
+        '<div class="entry-query">' + escapeHtml(r.query || '') + '</div>' +
+        '<div class="entry-response">' + escapeHtml((r.response_preview || '').slice(0, 120)) + '</div>' +
+        (hm ? '<div class="entry-heatmap">' + hm + '</div>' : '') +
+      '</div>' +
+      '<div class="entry-meta"><div>' + tok + ' tok</div><div>' + (r.latency_ms || 0) + 'ms</div></div>' +
+    '</div>';
   }).join('');
 }
 
+// ─── Stats ──────────────────────────────────────
 function updateStats() {
   const total = routes.length;
+  const fast = routes.filter(r => r.tier === 'fast').length;
+  const thinking = routes.filter(r => r.tier === 'thinking').length;
+  const deep = routes.filter(r => r.tier === 'deep').length;
+  const esc = routes.filter(r => r.escalated).length;
+  const toks = routes.reduce((s, r) => s + (r.tokens_in || 0) + (r.tokens_out || 0), 0);
   document.getElementById('stat-total').textContent = total;
-  document.getElementById('stat-fast').textContent = routes.filter(r => r.tier === 'fast').length;
-  document.getElementById('stat-thinking').textContent = routes.filter(r => r.tier === 'thinking').length;
-  document.getElementById('stat-deep').textContent = routes.filter(r => r.tier === 'deep').length;
-  document.getElementById('stat-escalated').textContent = routes.filter(r => r.escalated).length;
+  document.getElementById('stat-fast').textContent = fast;
+  document.getElementById('stat-thinking').textContent = thinking;
+  document.getElementById('stat-deep').textContent = deep;
+  document.getElementById('stat-escalated').textContent = esc;
+  document.getElementById('stat-tokens').textContent = toks > 999 ? (toks/1000).toFixed(1)+'K' : toks;
 }
 
+// ─── Route Query ────────────────────────────────
 async function testRoute() {
   const query = document.getElementById('query-input').value.trim();
   if (!query) return;
-
-  const forceTier = document.getElementById('force-tier').value;
-
+  const force = document.getElementById('force-tier').value;
   try {
     const resp = await fetch('/route', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({
-        query: query,
-        force_tier: forceTier || null,
-      }),
+      body: JSON.stringify({ query, force_tier: force || null }),
     });
-    const data = await resp.json();
+    const d = await resp.json();
     addRouteEntry({
       type: 'route',
-      query: data.query,
-      response_preview: (data.response || '').substring(0, 200),
-      complexity: data.complexity,
-      task: data.task,
-      confidence: data.confidence,
-      method: data.method,
-      tier: data.tier,
-      model_id: data.model_id,
-      model_name: data.model_name,
-      reason: data.reason,
-      tokens_in: data.tokens_in,
-      tokens_out: data.tokens_out,
-      latency_ms: data.latency_ms,
-      escalated: data.escalated,
-      error: data.error,
+      query: d.query,
+      response_preview: (d.response || '').substring(0, 200),
+      complexity: d.complexity,
+      task: d.task,
+      confidence: d.confidence,
+      method: d.method,
+      tier: d.tier,
+      model_id: d.model_id,
+      model_name: d.model_name,
+      reason: d.reason,
+      tokens_in: d.tokens_in,
+      tokens_out: d.tokens_out,
+      latency_ms: d.latency_ms,
+      escalated: d.escalated,
+      error: d.error,
+      match_density: d.match_density,
+      coverage: d.coverage,
+      concentration: d.concentration,
+      matched_words: d.matched_words,
+      query_words: d.query_words,
+      docs_hit: d.docs_hit,
     });
   } catch (e) {
     console.error('Route failed:', e);
   }
 }
 
+// ─── Model Pool ─────────────────────────────────
 async function loadModelPool() {
   try {
     const resp = await fetch('/models');
     const data = await resp.json();
+    document.getElementById('hero-model-count').textContent = data.count + ' models';
     const pool = document.getElementById('model-pool');
-    pool.innerHTML = `
-      <div class="mb-4">
-        <div class="text-sm font-medium text-green-400">Fast (${data.fast.length})</div>
-        ${data.fast.map(m => `<div class="text-xs text-slate-400 mono">${m.name}</div>`).join('')}
-      </div>
-      <div class="mb-4">
-        <div class="text-sm font-medium text-yellow-400">Thinking (${data.thinking.length})</div>
-        ${data.thinking.map(m => `<div class="text-xs text-slate-400 mono">${m.name}</div>`).join('')}
-      </div>
-      <div>
-        <div class="text-sm font-medium text-purple-400">Deep (${data.deep.length})</div>
-        ${data.deep.map(m => `<div class="text-xs text-slate-400 mono">${m.name}</div>`).join('')}
-      </div>
-      <div class="mt-4 pt-4 border-t border-slate-700">
-        <div class="text-xs text-slate-500">Total: ${data.count} models</div>
-      </div>
-    `;
+    let html = '';
+    const tiers = [
+      { key: 'fast', label: 'Fast', color: 'var(--fast-text)' },
+      { key: 'thinking', label: 'Thinking', color: 'var(--thinking-text)' },
+      { key: 'deep', label: 'Deep', color: 'var(--deep-text)' },
+    ];
+    for (const t of tiers) {
+      const models = data[t.key] || [];
+      html += '<div class="model-tier">' +
+        '<div class="model-tier-header" style="color:' + t.color + '">' + t.label + ' (' + models.length + ')</div>';
+      for (const m of models.slice(0, 6)) {
+        html += '<div class="model-item mono">' + escapeHtml(m.name) + '</div>';
+      }
+      if (models.length > 6) {
+        html += '<div class="model-item" style="color:#555">+ ' + (models.length - 6) + ' more</div>';
+      }
+      html += '</div>';
+    }
+    pool.innerHTML = html;
   } catch (e) {
-    document.getElementById('model-pool').innerHTML = '<div class="text-red-400 text-sm">Failed to load models</div>';
+    document.getElementById('model-pool').innerHTML = '<div class="mono" style="color:var(--error)">Failed to load</div>';
   }
 }
 
-function escapeHtml(text) {
-  if (!text) return '';
-  return text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+function escapeHtml(t) {
+  if (!t) return '';
+  return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
-// Init
+// ─── Init ───────────────────────────────────────
 connect();
 loadModelPool();
 </script>

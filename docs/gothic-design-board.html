@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Model Router — Gothic Design System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #000; color: #E8E6E3; font-family: 'Inter', sans-serif; display: flex; min-height: 100vh; }
+
+  /* ─── Sidebar (Tokens) ─── */
+  .sidebar {
+    width: 320px; min-height: 100vh;
+    background: #080808;
+    border-right: 1px solid #1A1A1A;
+    padding: 32px;
+    flex-shrink: 0;
+  }
+  .sidebar h2 { font-family: 'Unbounded', sans-serif; font-size: 1rem; font-weight: 700; margin-bottom: 24px; color: #666; letter-spacing: 0.04em; }
+  .token-group { margin-bottom: 28px; }
+  .token-group h3 { font-size: 0.625rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #555; margin-bottom: 12px; }
+  .swatch { display: flex; align-items: center; gap: 12px; padding: 6px 0; }
+  .swatch-box { width: 32px; height: 32px; border: 1px solid #1A1A1A; flex-shrink: 0; }
+  .swatch-label { font-size: 0.75rem; font-family: 'JetBrains Mono', monospace; color: #888; }
+  .swatch-label span { color: #555; margin-left: 8px; font-family: 'Inter', sans-serif; font-size: 0.625rem; }
+  .type-sample { margin-bottom: 12px; }
+  .type-sample .label { font-size: 0.625rem; color: #555; font-family: 'JetBrains Mono', monospace; margin-bottom: 4px; }
+
+  /* ─── Main Preview ─── */
+  .main { flex: 1; padding: 0; display: flex; flex-direction: column; }
+  .preview-header {
+    padding: 16px 40px;
+    border-bottom: 1px solid #1A1A1A;
+    display: flex; align-items: center; justify-content: space-between;
+    background: #050505;
+  }
+  .preview-header span { font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #555; }
+  .preview-header .live-dot { width: 6px; height: 6px; background: #3A3A3A; display: inline-block; margin-right: 6px; }
+  .preview-content { flex: 1; padding: 40px; overflow-y: auto; background: #000; }
+
+  /* ─── Dark Gothic Palette ─── */
+  .bg-000 { background: #000000; }
+  .bg-050 { background: #050505; }
+  .bg-080 { background: #080808; }
+  .bg-0C { background: #0C0C0C; }
+  .bg-10 { background: #101010; }
+  .bg-14 { background: #141414; }
+  .bg-1A { background: #1A1A1A; }
+  .bg-22 { background: #222222; }
+  .bg-2A { background: #2A2A2A; }
+  .bg-3A { background: #3A3A3A; }
+
+  /* ─── Hero Preview ─── */
+  .hero-preview {
+    border: 1px solid #1A1A1A;
+    padding: 48px;
+    margin-bottom: 32px;
+    background: #050505;
+  }
+  .hero-preview .overline {
+    font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.16em;
+    text-transform: uppercase; color: #555; margin-bottom: 12px;
+  }
+  .hero-preview h1 {
+    font-family: 'Unbounded', sans-serif;
+    font-size: 3.5rem; font-weight: 800;
+    letter-spacing: -0.02em; line-height: 1.0;
+    margin-bottom: 16px;
+  }
+  .hero-preview .sub {
+    color: #666; font-size: 1.125rem; max-width: 520px;
+    line-height: 1.6; margin-bottom: 32px;
+  }
+  .hero-preview .meta-row { display: flex; gap: 32px; }
+  .hero-preview .meta-item { display: flex; align-items: center; gap: 10px; }
+  .hero-preview .meta-item .dot { width: 8px; height: 8px; background: #3A3A3A; }
+  .hero-preview .meta-item .label { font-size: 0.75rem; color: #888; font-family: 'JetBrains Mono', monospace; }
+
+  /* ─── Card Demo ─── */
+  .card-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 32px; }
+  .card-demo { background: #0C0C0C; border: 1px solid #1A1A1A; padding: 24px; }
+  .card-demo .stat-num { font-family: 'Unbounded', sans-serif; font-size: 2rem; font-weight: 700; margin-bottom: 4px; }
+  .card-demo .stat-label { font-size: 0.6875rem; color: #666; letter-spacing: 0.08em; }
+  .card-demo .stat-label.green { color: #5A8A5A; }
+  .card-demo .stat-label.amber { color: #8A7A4A; }
+  .card-demo .stat-label.purple { color: #7A5A8A; }
+
+  /* ─── Query Bar Demo ─── */
+  .query-demo { display: flex; border: 1px solid #1A1A1A; background: #000; }
+  .query-demo input {
+    flex: 1; background: #000; border: none; padding: 16px 20px;
+    color: #E8E6E3; font-family: 'Inter', sans-serif; font-size: 0.9375rem;
+    outline: none;
+  }
+  .query-demo input::placeholder { color: #3A3A3A; }
+  .query-demo .tier-picker {
+    background: #0C0C0C; border: none; border-left: 1px solid #1A1A1A;
+    padding: 0 16px; color: #888; font-size: 0.75rem; font-family: 'Inter', sans-serif;
+  }
+  .query-demo .route-btn {
+    background: #1A1A1A; border: none; padding: 0 28px;
+    color: #E8E6E3; font-family: 'Inter', sans-serif;
+    font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.16em;
+    text-transform: uppercase; cursor: pointer;
+  }
+  .query-demo .route-btn:hover { background: #2A2A2A; }
+
+  /* ─── Feed Entry ─── */
+  .feed-demo { background: #0C0C0C; border-left: 3px solid #5A8A5A; padding: 12px 16px; border: 1px solid #1A1A1A; border-left-width: 3px; margin-bottom: 4px; }
+  .feed-demo .tags { display: flex; gap: 6px; margin-bottom: 4px; }
+  .feed-demo .badge { display: inline-block; padding: 1px 8px; font-size: 0.625rem; font-weight: 600; letter-spacing: 0.04em; }
+  .feed-demo .badge-fast { background: #1A2A1A; color: #5A8A5A; }
+  .feed-demo .badge-close { background: #1A1A1A; color: #5A8A5A; }
+  .feed-demo .query-text { font-size: 0.8125rem; font-weight: 500; }
+  .feed-demo .response-text { font-size: 0.75rem; color: #666; }
+  .feed-demo .heat-row { display: flex; gap: 3px; margin-top: 6px; align-items: center; }
+  .heat-dot { width: 8px; height: 12px; background: #1A1A1A; }
+  .heat-dot.fill { background: #3A3A3A; }
+
+  /* ─── Section Labels ─── */
+  .section-label {
+    font-size: 0.625rem; font-weight: 700; letter-spacing: 0.16em;
+    text-transform: uppercase; color: #444; margin-bottom: 16px; padding-bottom: 8px;
+    border-bottom: 1px solid #1A1A1A;
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══ SIDEBAR: TOKENS ═══ -->
+<div class="sidebar">
+  <h2>Gothic Tokens</h2>
+
+  <div class="token-group">
+    <h3>Surfaces</h3>
+    <div class="swatch"><div class="swatch-box bg-000"></div><div class="swatch-label">bg<span>#000000</span></div></div>
+    <div class="swatch"><div class="swatch-box bg-050"></div><div class="swatch-label">surface-raised<span>#050505</span></div></div>
+    <div class="swatch"><div class="swatch-box bg-080"></div><div class="swatch-label">sidebar<span>#080808</span></div></div>
+    <div class="swatch"><div class="swatch-box bg-0C"></div><div class="swatch-label">card<span>#0C0C0C</span></div></div>
+    <div class="swatch"><div class="swatch-box bg-10"></div><div class="swatch-label">card-hover<span>#101010</span></div></div>
+    <div class="swatch"><div class="swatch-box bg-14"></div><div class="swatch-label">card-alt<span>#141414</span></div></div>
+  </div>
+
+  <div class="token-group">
+    <h3>Borders &amp; Dividers</h3>
+    <div class="swatch"><div class="swatch-box bg-1A"></div><div class="swatch-label">border<span>#1A1A1A</span></div></div>
+    <div class="swatch"><div class="swatch-box bg-22"></div><div class="swatch-label">border-hover<span>#222222</span></div></div>
+    <div class="swatch"><div class="swatch-box bg-2A"></div><div class="swatch-label">border-strong<span>#2A2A2A</span></div></div>
+    <div class="swatch"><div class="swatch-box bg-3A"></div><div class="swatch-label">border-accent<span>#3A3A3A</span></div></div>
+  </div>
+
+  <div class="token-group">
+    <h3>Text</h3>
+    <div class="swatch"><div class="swatch-box" style="background:#E8E6E3"></div><div class="swatch-label">primary<span>#E8E6E3</span></div></div>
+    <div class="swatch"><div class="swatch-box" style="background:#888"></div><div class="swatch-label">secondary<span>#888888</span></div></div>
+    <div class="swatch"><div class="swatch-box" style="background:#555"></div><div class="swatch-label">muted<span>#555555</span></div></div>
+    <div class="swatch"><div class="swatch-box" style="background:#3A3A3A"></div><div class="swatch-label">placeholder<span>#3A3A3A</span></div></div>
+  </div>
+
+  <div class="token-group">
+    <h3>Typography</h3>
+    <div class="type-sample">
+      <div class="label">heading — Unbounded 800</div>
+      <div style="font-family:'Unbounded',sans-serif;font-weight:800;font-size:1.5rem">Model Router</div>
+    </div>
+    <div class="type-sample">
+      <div class="label">body — Inter 400</div>
+      <div style="font-family:'Inter',sans-serif;font-size:0.875rem;color:#888">Classify complexity, pick the cheapest capable model.</div>
+    </div>
+    <div class="type-sample">
+      <div class="label">code — JetBrains Mono 400</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:0.75rem;color:#555">d=0.556 · fast · 842 tok</div>
+    </div>
+    <div class="type-sample">
+      <div class="label">label-caps — Inter 700 + 0.12em</div>
+      <div style="font-family:'Inter',sans-serif;font-size:0.6875rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#666">Route · All Tiers · Connected</div>
+    </div>
+  </div>
+
+  <div class="token-group">
+    <h3>Tier Accents</h3>
+    <div class="swatch"><div class="swatch-box" style="background:#5A8A5A"></div><div class="swatch-label">fast<span>#5A8A5A</span></div></div>
+    <div class="swatch"><div class="swatch-box" style="background:#8A7A4A"></div><div class="swatch-label">thinking<span>#8A7A4A</span></div></div>
+    <div class="swatch"><div class="swatch-box" style="background:#7A5A8A"></div><div class="swatch-label">deep<span>#7A5A8A</span></div></div>
+  </div>
+</div>
+
+<!-- ═══ MAIN: PREVIEW ═══ -->
+<div class="main">
+  <div class="preview-header">
+    <span><span class="live-dot"></span> hero / feed / query</span>
+    <span style="color:#3A3A3A">v0.2.0 · gothic palette</span>
+  </div>
+
+  <div class="preview-content">
+
+    <!-- Hero Section -->
+    <div class="section-label">Hero</div>
+    <div class="hero-preview">
+      <div class="overline">Cost-Optimized LLM Routing</div>
+      <h1>Model Router</h1>
+      <div class="sub">Classify query complexity against a source of truth — pick the cheapest capable model from the OpenRouter free pool.</div>
+      <div class="meta-row">
+        <div class="meta-item"><div class="dot"></div><span class="label">26 models</span></div>
+        <div class="meta-item"><div class="dot" style="background:#5A8A5A"></div><span class="label">connected</span></div>
+        <div class="meta-item"><div class="dot"></div><span class="label">3 tiers · 54 tests</span></div>
+      </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="section-label">Stats</div>
+    <div class="card-row">
+      <div class="card-demo"><div class="stat-num">12</div><div class="stat-label">Routes</div></div>
+      <div class="card-demo"><div class="stat-num" style="color:#5A8A5A">7</div><div class="stat-label green">Fast</div></div>
+      <div class="card-demo"><div class="stat-num" style="color:#8A7A4A">3</div><div class="stat-label amber">Thinking</div></div>
+      <div class="card-demo"><div class="stat-num" style="color:#7A5A8A">2</div><div class="stat-label purple">Deep</div></div>
+      <div class="card-demo"><div class="stat-num">4.1K</div><div class="stat-label">Tokens</div></div>
+      <div class="card-demo"><div class="stat-num">0</div><div class="stat-label">Escalated</div></div>
+    </div>
+
+    <!-- Live Feed Entry -->
+    <div class="section-label">Feed Entry (with heatmap)</div>
+    <div class="feed-demo" style="border-left-color:#5A8A5A">
+      <div class="tags">
+        <span class="badge badge-fast">fast</span>
+        <span class="badge badge-close">close</span>
+        <span class="mono" style="font-size:0.625rem;color:#555">Liquid 1.2B</span>
+      </div>
+      <div class="query-text">What rewards does HooBank offer?</div>
+      <div class="response-text">Based on the provided context, HooBank offers rewards, cashback, and bonuses on every transaction.</div>
+      <div class="heat-row">
+        <span style="font-size:0.5625rem;color:#444;font-family:'JetBrains Mono',monospace">w</span>
+        <span class="heat-dot fill"></span>
+        <span class="heat-dot fill"></span>
+        <span class="heat-dot"></span>
+        <span style="font-size:0.5625rem;color:#444;font-family:'JetBrains Mono',monospace;margin-left:4px">d</span>
+        <span class="heat-dot fill" style="width:20px"></span>
+        <span style="font-size:0.5625rem;color:#444;font-family:'JetBrains Mono',monospace;margin-left:4px">67%</span>
+      </div>
+    </div>
+
+    <div class="feed-demo" style="border-left-color:#8A7A4A;margin-top:4px">
+      <div class="tags">
+        <span class="badge badge-fast" style="background:#2A2A1A;color:#8A7A4A">thinking</span>
+        <span class="badge badge-close" style="background:#1A1A1A;color:#8A7A4A">moderate</span>
+        <span class="mono" style="font-size:0.625rem;color:#555">Qwen Next 80B</span>
+      </div>
+      <div class="query-text">Explain quantum computing in simple terms</div>
+      <div class="response-text">Quantum computing is a type of computing that uses quantum mechanical phenomena...</div>
+      <div class="heat-row">
+        <span style="font-size:0.5625rem;color:#444;font-family:'JetBrains Mono',monospace">w</span>
+        <span class="heat-dot fill"></span>
+        <span class="heat-dot"></span>
+        <span class="heat-dot"></span>
+        <span style="font-size:0.5625rem;color:#444;font-family:'JetBrains Mono',monospace;margin-left:4px">d</span>
+        <span class="heat-dot fill" style="width:8px"></span>
+        <span style="font-size:0.5625rem;color:#444;font-family:'JetBrains Mono',monospace;margin-left:4px">33%</span>
+      </div>
+    </div>
+
+    <!-- Bedrock (Gothic feel) -->
+    <div class="section-label" style="margin-top:32px">Design Principles</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;color:#666;font-size:0.8125rem;line-height:1.7">
+      <div style="background:#050505;border:1px solid #1A1A1A;padding:20px">
+        <div style="font-family:'Unbounded',sans-serif;font-size:0.75rem;font-weight:700;color:#888;margin-bottom:8px">Weight</div>
+        Everything is heavy or it's nothing. Unbounded 800 for headings, never below 400 weight. Monolithic blocks, not delicate layers.
+      </div>
+      <div style="background:#050505;border:1px solid #1A1A1A;padding:20px">
+        <div style="font-family:'Unbounded',sans-serif;font-size:0.75rem;font-weight:700;color:#888;margin-bottom:8px">No Curves</div>
+        Zero rounded corners. Not one. Brutalism doesn't curve. The only radius in the system is 0px.
+      </div>
+      <div style="background:#050505;border:1px solid #1A1A1A;padding:20px">
+        <div style="font-family:'Unbounded',sans-serif;font-size:0.75rem;font-weight:700;color:#888;margin-bottom:8px">Depth Through Value</div>
+        No shadows, no gradients. Depth comes from contrast: #000 → #050505 → #0C0C0C → #1A1A1A.
+      </div>
+      <div style="background:#050505;border:1px solid #1A1A1A;padding:20px">
+        <div style="font-family:'Unbounded',sans-serif;font-size:0.75rem;font-weight:700;color:#888;margin-bottom:8px">One Accent</div>
+        If everything is accent, nothing is. Tier colors are desaturated — just enough to distinguish at a glance.
+      </div>
+    </div>
+
+  </div>
+</div>
+
+</body>
+</html>
