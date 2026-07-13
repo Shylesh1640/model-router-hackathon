@@ -31,12 +31,16 @@ class _TinyEmbed:
 
     @staticmethod
     def _content_words(text: str) -> frozenset:
+        import re
         raw = text.lower().strip()
         if "a:" in raw:
             raw = raw[:raw.index("a:")].strip()
         if raw.startswith("q:"):
             raw = raw[2:].strip()
-        words = raw.replace("-", " ").replace("'", "").split()
+        # Strip punctuation so "rewards," matches "rewards" and "offer?" matches "offer"
+        raw = re.sub(r"[^\w\s]", "", raw)
+        raw = raw.replace("-", " ").replace("'", "")
+        words = raw.split()
         return frozenset(w for w in words if w not in _TinyEmbed._STOP and len(w) > 1)
 
     @staticmethod
@@ -69,8 +73,8 @@ class SourceOfTruth:
         print(result.min_distance)  # 0.0 (identical topic)
     """
 
-    CLOSE_THRESHOLD = 0.30
-    MODERATE_THRESHOLD = 0.60
+    CLOSE_THRESHOLD = 0.60
+    MODERATE_THRESHOLD = 0.85
 
     def __init__(self):
         self._docs: list[SourceDocument] = []

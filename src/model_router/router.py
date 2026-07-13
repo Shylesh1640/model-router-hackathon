@@ -103,7 +103,12 @@ class CostRouter:
 
     @staticmethod
     def _pick_model(tier: str, needs_vision: bool = False) -> ModelInfo:
-        """Pick best model for tier, preferring vision-capable if needed."""
+        """Pick best model for tier, preferring vision-capable if needed.
+
+        Sorts by SMALLEST params first — less popular, less rate-limited,
+        cheaper for the caller. Cascade handles escalation if the small
+        model's output quality is insufficient.
+        """
         models = TIER_MODELS.get(tier, [])
         if not models:
             return _fallback_model(tier)
@@ -111,13 +116,11 @@ class CostRouter:
         if needs_vision:
             vision_models = [m for m in models if m.is_multimodal]
             if vision_models:
-                scored = sorted(
-                    vision_models, key=lambda m: m.total_params_b or 0, reverse=True
-                )
-                return scored[0]
+                # For vision: pick the smallest capable model (less loaded)
+                return min(vision_models, key=lambda m: m.total_params_b or 0)
 
-        scored = sorted(models, key=lambda m: m.total_params_b or 0, reverse=True)
-        return scored[0]
+        # Pick the SMALLEST model — cheapest, least rate-limited
+        return min(models, key=lambda m: m.total_params_b or 0)
 
 
 def _fallback_model(tier: str) -> ModelInfo:

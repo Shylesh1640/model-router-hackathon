@@ -19,7 +19,7 @@ def test_classify_close():
 def test_classify_moderate():
     classifier = DistanceClassifier()
     source = SourceQueryResult(
-        query="explain AI", min_distance=0.4,
+        query="explain AI", min_distance=0.70,
         total_docs=5,
     )
     result = classifier.classify("explain AI", source)
@@ -30,7 +30,7 @@ def test_classify_moderate():
 def test_classify_distant():
     classifier = DistanceClassifier()
     source = SourceQueryResult(
-        query="quantum gravity", min_distance=0.8,
+        query="quantum gravity", min_distance=0.90,
         total_docs=5,
     )
     result = classifier.classify("quantum gravity", source)
@@ -40,16 +40,16 @@ def test_classify_distant():
 
 def test_classify_boundary_close():
     classifier = DistanceClassifier()
-    # Strict < threshold means 0.30 maps to moderate
+    # Strict < means 0.60 maps to moderate
     source = SourceQueryResult(
-        query="test", min_distance=0.30,  # boundary
+        query="test", min_distance=0.60,
         total_docs=5,
     )
     result = classifier.classify("test", source)
     assert result.complexity == "moderate"
     # Just under boundary → close
     close_source = SourceQueryResult(
-        query="test", min_distance=0.29,
+        query="test", min_distance=0.59,
         total_docs=5,
     )
     close_result = classifier.classify("test", close_source)
@@ -58,16 +58,16 @@ def test_classify_boundary_close():
 
 def test_classify_boundary_moderate():
     classifier = DistanceClassifier()
-    # Strict < threshold means 0.60 maps to distant
+    # Strict < means 0.85 maps to distant
     source = SourceQueryResult(
-        query="test", min_distance=0.60,  # boundary
+        query="test", min_distance=0.85,
         total_docs=5,
     )
     result = classifier.classify("test", source)
     assert result.complexity == "distant"
     # Just under boundary → moderate
     moderate_source = SourceQueryResult(
-        query="test", min_distance=0.59,
+        query="test", min_distance=0.84,
         total_docs=5,
     )
     moderate_result = classifier.classify("test", moderate_source)

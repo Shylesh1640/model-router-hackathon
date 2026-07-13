@@ -13,14 +13,19 @@ class DistanceClassifier:
     Low distance → query is grounded in known content → use fast cheap model.
     High distance → query is novel → escalate to more capable model.
 
+    Thresholds are tuned for Dice-coefficient distances (0-1 scale):
+    - close < 0.60:   grounded, fast tier
+    - moderate < 0.85: web_search, thinking tier
+    - distant > 0.85:  deep_reasoning, deep tier
+
     Usage:
         classifier = DistanceClassifier()
         result = classifier.classify(query, source_result)
         print(result.complexity, result.task_label)
     """
 
-    CLOSE_THRESHOLD = 0.30
-    MODERATE_THRESHOLD = 0.60
+    CLOSE_THRESHOLD = 0.60
+    MODERATE_THRESHOLD = 0.85
 
     def classify(
         self,
