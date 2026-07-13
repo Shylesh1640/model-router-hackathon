@@ -141,15 +141,19 @@ class HeatmapClassifier:
         """Multi-factor decision tree.
 
         Rules in priority order:
-        1. Empty SOT or no matches at all → distant
-        2. Most query words found matches in a single doc → close
-        3. Some matches, spread across docs → moderate
-        4. Only one query word matched anything → moderate
+        1. Empty SOT or no matches at all → distant (unless trivial query)
+        2. Very short query (≤1 content word) with no matches → fast (trivial)
+        3. Most query words found matches in docs → close
+        4. Some matches → moderate
         5. Nothing matched → distant
         """
         # Empty SOT
         if sig.total_docs == 0:
             return "distant", "deep_reasoning", 0.5
+
+        # Very short queries with no matches → fast (trivial, any model)
+        if sig.matched_query_words == 0 and sig.query_word_count <= 1:
+            return "close", "grounded", 0.5
 
         # No matches at all
         if sig.matched_query_words == 0:

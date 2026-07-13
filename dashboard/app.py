@@ -237,25 +237,25 @@ DASHBOARD_HTML = r"""<!DOCTYPE html>
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root {
-  --bg: #000000;
-  --surface: #050505;
-  --card: #0C0C0C;
-  --card-hover: #101010;
-  --border: #1A1A1A;
-  --border-hover: #222222;
-  --border-strong: #2A2A2A;
-  --text: #E8E6E3;
-  --text-secondary: #888888;
-  --text-muted: #555555;
-  --accent: #2A2A2A;
-  --accent-hover: #3A3A3A;
+  --bg: #020202;
+  --surface: #1A1515;
+  --card: #2A2222;
+  --card-hover: #332A2A;
+  --border: #443B3B;
+  --border-hover: #5C4F4F;
+  --border-strong: #6B5C5C;
+  --text: #E8E8E8;
+  --text-secondary: #988686;
+  --text-muted: #857979;
+  --accent: #5C4F4F;
+  --accent-hover: #6B5C5C;
   --fast-bg: #1A2A1A;
-  --fast-text: #5A8A5A;
+  --fast-text: #8AB88A;
   --thinking-bg: #2A2A1A;
-  --thinking-text: #8A7A4A;
+  --thinking-text: #B8A86A;
   --deep-bg: #2A1A2A;
-  --deep-text: #7A5A8A;
-  --error: #5A1A1A;
+  --deep-text: #A888B8;
+  --error: #6B2A2A;
 }
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body {
