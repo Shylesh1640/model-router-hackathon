@@ -51,13 +51,11 @@ def test_remove():
 
 def test_complexity_from_distance():
     sot = SourceOfTruth()
-    assert sot.complexity_from_distance(0.1) == "close"
-    assert sot.complexity_from_distance(0.59) == "close"
-    # Strict < threshold — 0.60 maps to moderate
-    assert sot.complexity_from_distance(0.60) == "moderate"
-    assert sot.complexity_from_distance(0.79) == "moderate"
-    # 0.80 maps to distant (strict <)
-    assert sot.complexity_from_distance(0.80) == "distant"
+    assert sot.complexity_from_distance(0.1) == "close"  # MiniLM: < 0.20
+    assert sot.complexity_from_distance(0.19) == "close"
+    assert sot.complexity_from_distance(0.20) == "moderate"
+    assert sot.complexity_from_distance(0.34) == "moderate"
+    assert sot.complexity_from_distance(0.35) == "distant"
 
 
 def test_dice_similarity_identical():

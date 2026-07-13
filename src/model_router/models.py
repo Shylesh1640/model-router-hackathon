@@ -84,7 +84,7 @@ class SourceDocument:
 
     id: str
     content: str
-    embedding: Optional[list[str]] = None  # content words for Dice overlap
+    embedding: Optional[list] = None  # list[str] (Dice words) or list[float] (MiniLM vec)
     metadata: dict = field(default_factory=dict)
     source: str = ""
 

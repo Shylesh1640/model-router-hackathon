@@ -137,7 +137,11 @@ class RoutingPipeline:
         # STAGE 3: CLASSIFY COMPLEXITY
         # =====================================================================
         classify_span = trace.span(name="classification")
-        classification = self.classifier.classify(request.query, source_result)
+        classification = self.classifier.classify(
+            request.query, source_result,
+            intent=intent,
+            decomposition=decomposition,
+        )
         classify_span.end(output={
             "complexity": classification.complexity,
             "task_label": classification.task_label,

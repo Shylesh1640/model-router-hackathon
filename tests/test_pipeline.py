@@ -89,9 +89,13 @@ def test_pipeline_empty_sot():
     pipe = RoutingPipeline(config)
     # No documents seeded
 
-    req = RouteRequest(query="something completely new")
+    # Trivial intent with empty SOT → close (not distant)
+    req = RouteRequest(query="hi")
     result = pipe.route(req)
-
-    # Should classify as distant (no source matches)
-    assert result.classification.complexity == "distant"
+    assert result.classification.complexity == "close"
     assert result.source_query.min_distance >= 0.9
+
+    # Non-trivial intent with empty SOT → moderate (not deep)
+    req2 = RouteRequest(query="explain quantum computing")
+    result2 = pipe.route(req2)
+    assert result2.classification.complexity == "moderate"

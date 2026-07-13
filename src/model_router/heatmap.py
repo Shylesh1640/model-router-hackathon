@@ -98,15 +98,20 @@ class HeatmapClassifier:
     - min_distance: classic fallback
     """
 
-    def classify(self, query: str, source: SourceQueryResult) -> ClassificationResult:
+    def classify(
+        self,
+        query: str,
+        source: SourceQueryResult,
+        intent: Optional["IntentResult"] = None,
+        decomposition: Optional["DecompositionResult"] = None,
+    ) -> ClassificationResult:
         """Build a match signature and classify."""
 
         # Build the match vectors
-        from .store import _TinyEmbed
-        embedder = _TinyEmbed()
-        q_words = embedder.encode(query)
+        from .store import extract_content_words as _ecw
+        q_words = _ecw(query)
         doc_word_sets = [
-            list(doc.embedding) if doc.embedding else []
+            list(doc.metadata.get("content_words", [])) if doc.metadata else []
             for doc in source.matches
         ]
 
@@ -118,7 +123,9 @@ class HeatmapClassifier:
             total_docs=source.total_docs,
         )
 
-        complexity, task_label, confidence = self._classify_sig(sig)
+        complexity, task_label, confidence = self._classify_sig(
+            sig, intent=intent, decomposition=decomposition,
+        )
 
         return ClassificationResult(
             query=query,
@@ -137,25 +144,47 @@ class HeatmapClassifier:
             },
         )
 
-    def _classify_sig(self, sig: MatchSignature):
+    def _classify_sig(
+        self,
+        sig: MatchSignature,
+        intent: Optional["IntentResult"] = None,
+        decomposition: Optional["DecompositionResult"] = None,
+    ):
         """Multi-factor decision tree.
 
-        Rules in priority order:
-        1. Empty SOT or no matches at all → distant (unless trivial query)
-        2. Very short query (≤1 content word) with no matches → fast (trivial)
-        3. Most query words found matches in docs → close
-        4. Some matches → moderate
-        5. Nothing matched → distant
+        Factors in order:
+        1. Empty SOT → intent + decomposition only
+        2. SOT match signal (heatmap)  
+        3. Intent category (trivial intents counterbalance high distance)
+        4. Decomposition flags (needs_reasoning locks in at least moderate)
         """
-        # Empty SOT
+        # ── Compute intent/decomp signals first (used by multiple branches) ──
+        trivial_intents = {"general", "command", "summarization"}
+        intent_is_trivial = (
+            intent is not None and intent.intent in trivial_intents
+        )
+        no_reasoning = (
+            decomposition is None or not decomposition.needs_reasoning
+        )
+
+        # ── Empty SOT → fall back to intent + decomposition ──
         if sig.total_docs == 0:
-            return "distant", "deep_reasoning", 0.5
+            if intent_is_trivial and no_reasoning:
+                return "close", "grounded", 0.5
+            # Non-trivial intent with no SOT → moderate (not deep)
+            return "moderate", "web_search", 0.5
+
+        # ── Trivial intents with no SOT match → fast ──
 
         # Very short queries with no matches → fast (trivial, any model)
         if sig.matched_query_words == 0 and sig.query_word_count <= 1:
             return "close", "grounded", 0.5
 
-        # No matches at all
+        # Trivial intent + no SOT match + no reasoning needed → moderate/fast
+        if intent_is_trivial and no_reasoning and sig.matched_query_words == 0:
+            return "close", "grounded", 0.5
+
+        # No matches at all → non-trivial → deep
         if sig.matched_query_words == 0:
             return "distant", "deep_reasoning", 0.5
 
