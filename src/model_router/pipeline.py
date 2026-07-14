@@ -73,7 +73,9 @@ class RoutingPipeline:
             base_delay=self.config.rate_limit_base_delay,
             max_delay=self.config.rate_limit_max_delay,
         )
-        self.searcher = WebSearcher(search_url="http://localhost:8080")
+        self.searcher = WebSearcher(
+            search_url=self.config.web_search_url or None,
+        )
         self.telemetry = telemetry or get_telemetry()
 
         # History for analytics

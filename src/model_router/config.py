@@ -28,6 +28,7 @@ class RouterConfig:
     rate_limit_retry_count: int = 3          # max retries per model call
     rate_limit_base_delay: float = 1.0       # base backoff in seconds
     rate_limit_max_delay: float = 30.0       # cap for exponential backoff
+    web_search_url: str = ""
 
     # Cascade (escalation to next tier on low confidence)
     cascade_enabled: bool = True
@@ -60,4 +61,5 @@ def get_config() -> RouterConfig:
         rate_limit_retry_count=int(os.getenv("RATE_LIMIT_RETRIES", "3")),
         circuit_breaker_cooldown=int(os.getenv("CB_COOLDOWN", "60")),
         circuit_breaker_max_failures=int(os.getenv("CB_MAX_FAILURES", "3")),
+        web_search_url=os.getenv("SEARCH_URL", "").strip(),
     )

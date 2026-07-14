@@ -6,6 +6,7 @@ Standalone web app for testing and monitoring the routing pipeline.
 import csv
 import logging
 import os
+import socket
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -42,16 +43,27 @@ def seed_sot_from_csv(csv_path: str, max_rows: int = 500):
         logger.info("SOT already has %s docs, skipping seed", sot.count())
         return sot.count()
     count = 0
-    with open(path) as f:
-        reader = csv.DictReader(f)
-        for i, row in enumerate(reader):
+    encodings = ("utf-8-sig", "cp1252", "latin-1")
+    last_error = None
+    for encoding in encodings:
+      try:
+        with open(path, encoding=encoding, newline="") as f:
+          reader = csv.DictReader(f)
+          for i, row in enumerate(reader):
             if i >= max_rows:
-                break
+              break
             q = row.get("question", row.get("Question", ""))
             a = row.get("answer", row.get("Answer", ""))
             if q and a:
-                sot.add_document(f"Q: {q}\nA: {a}", source="alexa-qa")
-                count += 1
+              sot.add_document(f"Q: {q}\nA: {a}", source="alexa-qa")
+              count += 1
+        break
+      except UnicodeDecodeError as exc:
+        last_error = exc
+        count = 0
+        continue
+    else:
+      raise last_error
     logger.info("Seeded %s docs into SOT from %s", count, csv_path)
     return count
 
@@ -210,17 +222,37 @@ def _response_to_dict(r) -> dict:
 
 
 def run_dashboard():
-    import uvicorn
-    uvicorn.run(
-        app,
-        host=config.dashboard_host,
-        port=config.dashboard_port,
-        log_level=config.log_level.lower(),
+  import uvicorn
+
+  port = _find_available_port(config.dashboard_host, config.dashboard_port)
+  if port != config.dashboard_port:
+    logger.warning(
+      "Dashboard port %s is in use, falling back to %s",
+      config.dashboard_port,
+      port,
     )
 
+  uvicorn.run(
+    app,
+    host=config.dashboard_host,
+    port=port,
+    log_level=config.log_level.lower(),
+  )
 
-if __name__ == "__main__":
-    run_dashboard()
+
+def _find_available_port(host: str, start_port: int, max_tries: int = 20) -> int:
+  """Return the first available port at or above start_port."""
+  for port in range(start_port, start_port + max_tries):
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+      sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+      try:
+        sock.bind((host, port))
+      except OSError:
+        continue
+      return port
+  raise RuntimeError(
+    f"No free port found between {start_port} and {start_port + max_tries - 1}"
+  )
 
 
 # =============================================================================
@@ -640,3 +672,7 @@ loadModelPool();
 </body>
 </html>
 """
+
+
+if __name__ == "__main__":
+  run_dashboard()
